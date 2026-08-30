@@ -1,0 +1,15 @@
+{
+  "name": "心的花园 · 抽卡",
+  "short_name": "心的花园",
+  "description": "低能量时刻的自救抽卡小花园",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efebce",
+  "theme_color": "#064013",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
