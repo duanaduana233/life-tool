@@ -346,8 +346,16 @@ tr:hover .edit-btn { opacity:1; }
 <body>
 <div class="container">
   <header>
-    <h1>人生看板</h1>
-    <p>养生 · 学业 · 爱好 · 财务 · 时间</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <h1>人生看板</h1>
+        <p>养生 · 学业 · 爱好 · 财务 · 时间</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-outline" onclick="exportData()">💾 导出数据</button>
+        <button class="btn btn-sm btn-outline" onclick="importData()">📂 导入数据</button>
+      </div>
+    </div>
   </header>
 
   <div class="tabs">
@@ -1084,6 +1092,42 @@ function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); } catch(e){}
 }
 
+
+function exportData() {
+  const data = localStorage.getItem(STORAGE_KEY);
+  if (!data) return alert('暂无数据可导出');
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'life-board-backup-' + today() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = event => {
+      try {
+        const text = event.target.result;
+        JSON.parse(text);
+        localStorage.setItem(STORAGE_KEY, text);
+        alert('数据导入成功，页面即将刷新');
+        location.reload();
+      } catch (err) {
+        alert('文件格式错误，导入失败');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
 function today() {
   const d = new Date();
   const y = d.getFullYear();
