@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>人生看板</title>
+<style>
+:root {
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text2: #666;
+  --text3: #999;
+  --border: #e0e0e0;
+  --accent-health: #2d8a4e;
+  --accent-study: #2563b5;
+  --accent-hobby: #7c3aed;
+  --accent-finance: #d97706;
+  --accent-time: #0d9488;
+  --time-saved: #16a34a;
+  --time-free: #2563eb;
+  --time-squeeze: #dc2626;
+  --red: #dc2626;
+  --green: #16a34a;
+  --blue: #2563eb;
+  --yellow: #d97706;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --card: #141414;
+    --text: #f0f0f0;
+    --text2: #aaa;
+    --text3: #666;
+    --border: #222;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); line-height:1.5; padding:12px; }
+.container { max-width:1100px; margin:0 auto; }
+header { margin-bottom:16px; }
+header h1 { font-size:20px; font-weight:600; }
+header p { font-size:13px; color:var(--text2); margin-top:2px; }
+
+.tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+.tab {
+  padding:10px 16px; border-radius:var(--radius); border:1px solid var(--border);
+  background:var(--card); color:var(--text2); cursor:pointer; font-size:14px;
+  transition:all .15s; font-weight:500; min-height:44px; display:flex; align-items:center;
+}
+.tab:hover { color:var(--text); }
+.tab.active { background:var(--text); color:var(--card); border-color:var(--text); }
+.tab-health.active { background:var(--accent-health); border-color:var(--accent-health); }
+.tab-study.active { background:var(--accent-study); border-color:var(--accent-study); }
+.tab-hobby.active { background:var(--accent-hobby); border-color:var(--accent-hobby); }
+.tab-finance.active { background:var(--accent-finance); border-color:var(--accent-finance); }
+.tab-time.active { background:var(--accent-time); border-color:var(--accent-time); }
+
+.panel { display:none; }
+.panel.active { display:block; animation:fade .2s; }
+@keyframes fade { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+.card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px; margin-bottom:10px; box-shadow:var(--shadow);
+}
+.card-title { font-size:15px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.card-title .dot { width:8px; height:8px; border-radius:50%; }
+
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+.cal-header { font-size:11px; color:var(--text3); padding:6px 2px; font-weight:500; }
+.cal-day {
+  aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+  border-radius:8px; font-size:14px; cursor:pointer; position:relative;
+  border:1px solid transparent; transition:all .15s; min-height:40px;
+}
+.cal-day:hover { background:rgba(0,0,0,0.04); }
+.cal-day.today { background:var(--text); color:var(--card); font-weight:600; }
+.cal-day.selected { border-color:var(--accent-study); background:rgba(37,99,181,0.06); }
+.cal-day.has-event { background:rgba(37,99,181,0.08); }
+.cal-day .cal-dot { position:absolute; bottom:4px; width:5px; height:5px; border-radius:50%; background:var(--green); }
+
+.check-list { display:flex; flex-direction:column; gap:6px; }
+.check-row {
+  display:flex; align-items:center; gap:10px; padding:10px;
+  border-radius:8px; transition:background .15s; min-height:44px;
+}
+.check-row:hover { background:rgba(0,0,0,0.03); }
+.check-box {
+  width:22px; height:22px; border:2px solid var(--border); border-radius:6px;
+  flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.check-row.done .check-box { background:var(--green); border-color:var(--green); color:#fff; }
+.check-row.done .check-text { text-decoration:line-through; color:var(--text3); }
+.check-text { flex:1; font-size:15px; }
+.check-meta { font-size:12px; color:var(--text3); white-space:nowrap; }
+
+.inp {
+  padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+  background:transparent; color:var(--text); font-family:inherit; font-size:15px; outline:none; width:100%;
+  min-height:44px;
+}
+.inp:focus { border-color:var(--text2); }
+.inp-sm { padding:8px 10px; font-size:14px; min-height:40px; }
+.btn {
+  padding:10px 16px; border:none; border-radius:8px; background:var(--text); color:var(--card);
+  font-family:inherit; font-size:14px; cursor:pointer; transition:opacity .15s; white-space:nowrap;
+  min-height:44px; display:flex; align-items:center; justify-content:center;
+}
+.btn:hover { opacity:.85; }
+.btn-sm { padding:8px 12px; font-size:13px; min-height:40px; }
+.btn-red { background:var(--red); }
+.btn-blue { background:var(--blue); }
+.btn-green { background:var(--green); }
+.btn-outline {
+  padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+  background:transparent; color:var(--text2); font-family:inherit; font-size:13px;
+  cursor:pointer; transition:all .15s; min-height:40px;
+}
+.btn-outline:hover { border-color:var(--text2); color:var(--text); }
+.btn-outline.active { background:var(--text); color:var(--card); border-color:var(--text); }
+
+.badge { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px; }
+.badge-green { background:rgba(22,163,74,0.12); color:var(--green); }
+.badge-red { background:rgba(220,38,38,0.12); color:var(--red); }
+.badge-blue { background:rgba(37,99,235,0.12); color:var(--blue); }
+.badge-yellow { background:rgba(217,119,6,0.12); color:var(--yellow); }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:768px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+
+.table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); }
+th { font-weight:600; color:var(--text2); font-size:13px; }
+tr:hover { background:rgba(0,0,0,0.02); }
+
+.progress { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:4px; }
+.progress-bar { height:100%; border-radius:3px; transition:width .3s; }
+
+.achieve-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+@media (min-width:768px) { .achieve-grid { grid-template-columns:repeat(4,1fr); } }
+.achieve-card { text-align:center; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); }
+.achieve-num { font-size:22px; font-weight:600; }
+.achieve-label { font-size:12px; color:var(--text2); margin-top:2px; }
+
+.link-item { display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px; }
+.link-item:hover { background:rgba(0,0,0,0.03); }
+.link-url { color:var(--accent-study); font-size:14px; text-decoration:none; word-break:break-all; }
+.link-url:hover { text-decoration:underline; }
+
+.fund-total { font-size:18px; font-weight:600; margin-top:8px; }
+.fund-positive { color:var(--green); }
+.fund-negative { color:var(--red); }
+
+.delete-btn {
+  opacity:0; transition:opacity .15s; cursor:pointer; color:var(--text3);
+  padding:6px 8px; border-radius:4px; font-size:13px; min-height:32px; display:flex; align-items:center;
+}
+.delete-btn:hover { color:var(--red); background:rgba(220,38,38,0.08); }
+tr:hover .delete-btn, .check-row:hover .delete-btn { opacity:1; }
+@media (max-width:768px) { .delete-btn { opacity:1; } }
+
+.edit-btn {
+  opacity:0; transition:opacity .15s; cursor:pointer; color:var(--text3);
+  padding:6px 8px; border-radius:4px; font-size:13px; min-height:32px; display:flex; align-items:center;
+}
+.edit-btn:hover { color:var(--blue); background:rgba(37,99,235,0.08); }
+tr:hover .edit-btn { opacity:1; }
+@media (max-width:768px) { .edit-btn { opacity:1; } }
+
+.add-row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+
+.schedule-item { 
+  padding:10px 12px; border-radius:8px; background:var(--bg); border:1px solid var(--border); 
+  font-size:14px; margin-bottom:6px; display:flex; align-items:center; gap:10px; min-height:44px;
+}
+.schedule-item.done { background:rgba(22,163,74,0.06); border-color:rgba(22,163,74,0.2); }
+.schedule-item.done .schedule-text { text-decoration:line-through; color:var(--text3); }
+.schedule-text { flex:1; outline:none; font-size:15px; }
+.schedule-text:focus { background:var(--card); }
+
+.kanban { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:768px) { .kanban { grid-template-columns:1fr; } }
+.kanban-col { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--card); }
+.kanban-title { font-size:14px; font-weight:600; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.kanban-item { padding:10px; border-radius:8px; background:var(--bg); margin-bottom:8px; font-size:14px; }
+.kanban-item .kb-progress { height:5px; background:var(--border); border-radius:3px; margin-top:8px; overflow:hidden; }
+.kanban-item .kb-bar { height:100%; border-radius:3px; }
+
+.today-mark { font-size:11px; color:var(--green); font-weight:600; margin-left:4px; }
+
+/* Modal */
+.modal-overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.5); z-index:1000; display:none;
+  align-items:center; justify-content:center; padding:16px;
+}
+.modal-overlay.active { display:flex; }
+.modal {
+  background:var(--card); border-radius:16px; width:100%; max-width:500px;
+  max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  animation:modalIn .2s;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal-header {
+  padding:16px 20px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; background:var(--card); z-index:10; border-radius:16px 16px 0 0;
+}
+.modal-title { font-size:17px; font-weight:600; }
+.modal-close { 
+  width:36px; height:36px; border-radius:50%; border:none; background:var(--bg);
+  color:var(--text2); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.modal-close:hover { background:var(--border); }
+.modal-body { padding:16px 20px; }
+.modal-section { margin-bottom:16px; }
+.modal-section-title { font-size:14px; font-weight:600; color:var(--text2); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.modal-item { padding:8px 0; font-size:14px; display:flex; align-items:center; gap:8px; }
+.modal-item .status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.modal-item .status.done { background:var(--green); }
+.modal-item .status.undone { background:var(--border); }
+.modal-empty { color:var(--text3); font-size:13px; padding:8px 0; }
+
+/* Stats */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:768px) { .stats-grid { grid-template-columns:1fr; } }
+.stats-card { padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); }
+.stats-title { font-size:13px; font-weight:600; color:var(--text2); margin-bottom:10px; }
+.heat-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.heat-cell {
+  aspect-ratio:1; border-radius:4px; font-size:9px; display:flex;
+  align-items:center; justify-content:center; color:transparent;
+  transition:all .15s; cursor:default;
+}
+.heat-cell.has-data { background:var(--accent-health); color:#fff; font-weight:600; font-size:10px; }
+.heat-cell.today { box-shadow:0 0 0 2px var(--text); }
+.heat-legend { display:flex; gap:8px; margin-top:8px; font-size:11px; color:var(--text3); align-items:center; }
+.heat-legend-dot { width:10px; height:10px; border-radius:3px; }
+
+.sleep-bar { display:flex; height:24px; border-radius:6px; overflow:hidden; margin-top:8px; }
+.sleep-segment { display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:600; transition:width .3s; }
+.sleep-legend { display:flex; gap:12px; margin-top:8px; font-size:11px; color:var(--text3); flex-wrap:wrap; }
+.sleep-legend-item { display:flex; align-items:center; gap:4px; }
+.sleep-legend-dot { width:10px; height:10px; border-radius:3px; }
+
+.stat-number { font-size:28px; font-weight:600; margin-top:4px; }
+.stat-label { font-size:12px; color:var(--text2); }
+
+/* Transaction */
+.tx-row {
+  display:flex; align-items:center; gap:10px; padding:10px;
+  border-radius:8px; transition:background .15s; min-height:48px;
+  border-bottom:1px solid var(--border);
+}
+.tx-row:last-child { border-bottom:none; }
+.tx-row:hover { background:rgba(0,0,0,0.02); }
+.tx-icon {
+  width:36px; height:36px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
+}
+.tx-icon.income { background:rgba(22,163,74,0.12); color:var(--green); }
+.tx-icon.expense { background:rgba(220,38,38,0.12); color:var(--red); }
+.tx-info { flex:1; }
+.tx-name { font-size:14px; font-weight:500; }
+.tx-date { font-size:11px; color:var(--text3); margin-top:1px; }
+.tx-amount { font-size:15px; font-weight:600; }
+.tx-amount.income { color:var(--green); }
+.tx-amount.expense { color:var(--red); }
+
+.tx-type-switch { display:flex; gap:4px; margin-bottom:8px; }
+.tx-type-btn {
+  flex:1; padding:8px; border:1px solid var(--border); border-radius:8px;
+  background:transparent; color:var(--text2); font-family:inherit; font-size:13px;
+  cursor:pointer; text-align:center; transition:all .15s; min-height:40px;
+}
+.tx-type-btn.active.income { background:var(--green); color:#fff; border-color:var(--green); }
+.tx-type-btn.active.expense { background:var(--red); color:#fff; border-color:var(--red); }
+
+.summary-row { display:flex; gap:12px; margin-bottom:12px; }
+.summary-item { flex:1; text-align:center; padding:10px; border-radius:8px; background:var(--bg); border:1px solid var(--border); }
+.summary-value { font-size:20px; font-weight:600; }
+.summary-label { font-size:11px; color:var(--text2); margin-top:2px; }
+
+/* Touch friendly */
+@media (max-width:768px) {
+  body { padding:8px; }
+  .cal-day { font-size:15px; min-height:44px; }
+  .check-box { width:24px; height:24px; }
+  .btn, .btn-sm, .btn-outline, .tx-type-btn { min-height:48px; }
+  .inp { min-height:48px; font-size:16px; }
+  .schedule-item { min-height:48px; }
+  .tx-row { min-height:52px; }
+}
+
+.account-item { padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); margin-bottom:8px; }
+.account-name { font-size:14px; font-weight:600; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+.account-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.account-row label { font-size:12px; color:var(--text3); width:60px; flex-shrink:0; }
+.account-row .account-fund { font-size:14px; color:var(--text2); flex:1; }
+.account-row .account-total { font-size:15px; font-weight:600; color:var(--text); flex:1; }
+.account-row .inp { flex:1; min-height:40px; }
+.account-delete { color:var(--text3); font-size:12px; cursor:pointer; padding:4px 8px; border-radius:4px; }
+.account-delete:hover { color:var(--red); background:rgba(220,38,38,0.08); }
+.select-inp { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text); font-family:inherit; font-size:15px; outline:none; width:100%; min-height:44px; }
+.select-inp:focus { border-color:var(--text2); }
+
+/* ===== 时间资产管理 ===== */
+.time-section-title { font-size:14px; font-weight:600; color:var(--text2); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.time-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.time-badge-saved { background:rgba(22,163,74,0.12); color:var(--time-saved); }
+.time-badge-free { background:rgba(37,99,235,0.12); color:var(--time-free); }
+.time-badge-squeeze { background:rgba(220,38,38,0.12); color:var(--time-squeeze); }
+.time-stat-box { text-align:center; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); }
+.time-stat-value { font-size:24px; font-weight:600; }
+.time-stat-label { font-size:12px; color:var(--text2); margin-top:2px; }
+.time-input-min { width:80px; }
+.time-input-hm { width:100px; }
+.time-hm-wrap { display:flex; align-items:center; gap:4px; }
+.time-hm-wrap input { width:60px; text-align:center; }
+.time-hm-wrap span { color:var(--text3); font-size:13px; }
+.time-star { font-size:20px; color:var(--border); transition:color .2s; }
+.time-star.active { color:#f59e0b; }
+.time-pl-positive { color:var(--green); }
+.time-pl-negative { color:var(--red); }
+.time-pl-zero { color:var(--text2); }
+.practice-sync-hint { font-size:11px; color:var(--text3); margin-left:8px; }
+.value-stars { display:flex; gap:2px; }
+.value-star { cursor:pointer; font-size:16px; color:var(--border); transition:color .15s; }
+.value-star.active { color:#f59e0b; }
+.value-star:hover { color:#fbbf24; }
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="人生看板">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>人生看板</h1>
+    <p>养生 · 学业 · 爱好 · 财务 · 时间</p>
+  </header>
+
+  <div class="tabs">
+    <div class="tab tab-health active" onclick="switchTab('health')">养生</div>
+    <div class="tab tab-study" onclick="switchTab('study')">学业</div>
+    <div class="tab tab-hobby" onclick="switchTab('hobby')">爱好</div>
+    <div class="tab tab-finance" onclick="switchTab('finance')">财务</div>
+    <div class="tab tab-time" onclick="switchTab('time')">时间</div>
+  </div>
+
+  <!-- ===== 养生 ===== -->
+  <div class="panel active" id="panel-health">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>本月日历</div>
+        <div class="calendar" id="health-cal"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>成就</div>
+        <div class="achieve-grid">
+          <div class="achieve-card"><div class="achieve-num" id="ach-continuous">0</div><div class="achieve-label">连续打卡天</div></div>
+          <div class="achieve-card"><div class="achieve-num" id="ach-exercise">0</div><div class="achieve-label">本周运动次</div></div>
+          <div class="achieve-card"><div class="achieve-num" id="ach-early">0</div><div class="achieve-label">早睡天数</div></div>
+          <div class="achieve-card"><div class="achieve-num" id="ach-sup">0</div><div class="achieve-label">补剂打卡</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>本月统计</div>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="stats-title">运动热力图</div>
+          <div class="heat-grid" id="exercise-heat"></div>
+          <div class="heat-legend">
+            <span class="heat-legend-dot" style="background:var(--accent-health)"></span>有运动
+            <span class="heat-legend-dot" style="background:var(--border)"></span>无运动
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px">
+            <div><div class="stat-number" id="stat-exercise-days" style="color:var(--accent-health)">0</div><div class="stat-label">运动天数</div></div>
+            <div><div class="stat-number" id="stat-exercise-total">0</div><div class="stat-label">总次数</div></div>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-title">睡眠分布</div>
+          <div class="sleep-bar" id="sleep-bar"></div>
+          <div class="sleep-legend" id="sleep-legend"></div>
+          <div style="display:flex;gap:16px;margin-top:10px">
+            <div><div class="stat-number" id="stat-sleep-days" style="color:var(--accent-study)">0</div><div class="stat-label">记录天数</div></div>
+            <div><div class="stat-number" id="stat-sleep-rate" style="color:var(--green)">0%</div><div class="stat-label">早睡率</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>运动打卡</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px">
+        八段锦、站桩每天打卡 · 其他运动每周任选3项完成3次+ · 康复训练每周3次（至9月初）
+      </p>
+      <div class="check-list" id="exercise-list"></div>
+      <div style="margin-top:10px;font-size:13px;color:var(--text2)">
+        本周主运动进度: <span id="exercise-progress-text">0/3</span>
+        <div class="progress"><div class="progress-bar" id="exercise-progress-bar" style="width:0%;background:var(--accent-health)"></div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>作息打卡</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <input type="time" class="inp inp-sm" id="sleep-time" placeholder="入睡时间">
+          <input type="time" class="inp inp-sm" id="wake-time" placeholder="起床时间">
+          <button class="btn btn-sm" onclick="recordSleep()">记录今日</button>
+          <button class="btn btn-sm btn-blue" onclick="recordNoonNap()">子午觉打卡</button>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">
+          判定规则: 1:00-6:59 晚睡(红) · 7:00-12:00 摸鱼(黄) · 其余早睡(绿)
+        </div>
+        <div id="sleep-records" class="check-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>补剂打卡</div>
+        <div class="check-list" id="supplement-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-health)"></span>特殊疗法</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px">每周三次及以上 · 一周结束后自动重置</p>
+      <div class="check-list" id="therapy-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== 学业 ===== -->
+  <div class="panel" id="panel-study">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-study)"></span>学业日历</div>
+        <div class="calendar" id="study-cal"></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text3)" id="study-cal-label">点击日期添加/查看日程</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input class="inp" id="study-schedule-text" placeholder="日程内容...">
+          <button class="btn btn-sm" onclick="addStudySchedule()">添加</button>
+        </div>
+        <div id="study-schedules" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-study)"></span>人类学快速入门</div>
+        <div id="anthro-links"></div>
+        <div class="add-row">
+          <input class="inp" id="anthro-url" placeholder="粘贴网页链接...">
+          <button class="btn btn-sm" onclick="addAnthroLink()">添加</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-study)"></span>进程管理看板</div>
+      <div class="kanban" id="study-kanban">
+        <div class="kanban-col">
+          <div class="kanban-title">英语学习</div>
+          <div id="kb-english"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-title">人类学</div>
+          <div id="kb-anthro"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-title">文章发表</div>
+          <div id="kb-article"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-study)"></span>文章发表跟进</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>项目名称</th><th>当前进程</th><th>预期完成</th><th>进度</th><th></th></tr></thead>
+          <tbody id="article-table"></tbody>
+        </table>
+      </div>
+      <div class="add-row">
+        <input class="inp" id="art-name" placeholder="项目名" style="flex:1">
+        <input class="inp" id="art-process" placeholder="进程" style="flex:1">
+        <input class="inp" id="art-deadline" placeholder="预期时间" style="width:120px">
+        <input class="inp" id="art-progress" placeholder="进度%" style="width:80px" type="number" min="0" max="100">
+        <button class="btn btn-sm" onclick="addArticle()">添加</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-study)"></span>技能学习</div>
+      <div class="check-list" id="skill-list"></div>
+      <div class="add-row">
+        <input class="inp" id="skill-name" placeholder="新技能名称..." style="flex:1">
+        <button class="btn btn-sm" onclick="addSkill()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 爱好 ===== -->
+  <div class="panel" id="panel-hobby">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-hobby)"></span>项目清单</div>
+        <div class="check-list" id="hobby-list"></div>
+        <div class="add-row">
+          <input class="inp" id="hobby-name" placeholder="新爱好项目..." style="flex:1">
+          <button class="btn btn-sm" onclick="addHobby()">添加</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-hobby)"></span>特殊事项</div>
+        <div id="hobby-events"></div>
+        <div class="add-row" style="flex-direction:column">
+          <input class="inp" id="event-name" placeholder="事项名称">
+          <div style="display:flex;gap:8px">
+            <input class="inp" id="event-place" placeholder="地点" style="flex:1">
+            <input class="inp" id="event-time" placeholder="时间" style="flex:1">
+          </div>
+          <button class="btn btn-sm" onclick="addHobbyEvent()" style="align-self:flex-start">添加事项</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 财务 ===== -->
+  <div class="panel" id="panel-finance">
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-finance)"></span>现有资金</div>
+        <div id="accounts-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="add-row" style="margin-top:10px">
+          <input class="inp" id="new-bank-name" placeholder="银行卡名称（如：招商银行）..." style="flex:1">
+          <button class="btn btn-sm" onclick="addBankAccount()">添加银行卡</button>
+        </div>
+        <div class="fund-total" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">总计: <span id="fund-total">0.00</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-finance)"></span>本月收支</div>
+        <div class="summary-row">
+          <div class="summary-item">
+            <div class="summary-value fund-positive" id="tx-income">0</div>
+            <div class="summary-label">总收入</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value fund-negative" id="tx-expense">0</div>
+            <div class="summary-label">总支出</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value" id="tx-balance" style="color:var(--text)">0</div>
+            <div class="summary-label">结余</div>
+          </div>
+        </div>
+        <div id="tx-list" style="max-height:300px;overflow-y:auto;margin-bottom:10px"></div>
+        <div style="border-top:1px solid var(--border);padding-top:10px">
+          <div class="tx-type-switch">
+            <button class="tx-type-btn income active" id="tx-btn-income" onclick="setTxType('income')">收入</button>
+            <button class="tx-type-btn expense" id="tx-btn-expense" onclick="setTxType('expense')">支出</button>
+          </div>
+          <div class="add-row">
+            <input class="inp" id="tx-name" placeholder="名称（如：工资、奶茶）" style="flex:1">
+            <input class="inp" id="tx-amount" placeholder="金额" type="number" style="width:120px">
+            <input class="inp" id="tx-date" type="date" style="width:130px">
+            <button class="btn btn-sm" onclick="addTransaction()">添加</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-finance)"></span>购物清单</div>
+        <div id="wishlist"></div>
+        <div class="add-row">
+          <input class="inp" id="wish-name" placeholder="物品" style="flex:1">
+          <input class="inp" id="wish-price" placeholder="价格" type="number" style="width:100px">
+          <button class="btn btn-sm" onclick="addWish()">添加</button>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:13px;color:var(--text2)">预计总价: <span id="wish-total">0.00</span></div>
+          <div style="font-size:13px;color:var(--text2);margin-top:4px">估计结余: <span id="est-balance" style="font-weight:500">0.00</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">公式：现有资金总额 + 本月结余 − 预计支出</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-finance)"></span>基金持仓</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>基金名称</th><th>购买渠道</th><th>金额</th><th>盈亏额</th><th>盈亏%</th>
+              <th>管理方式</th><th>下一步计划</th><th>投入金额</th><th>卖出盈利</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="fund-table"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;padding:12px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center">
+          <div><div style="font-size:11px;color:var(--text3)">现有总金额</div><div style="font-size:18px;font-weight:500" id="fund-current-total">0</div></div>
+          <div><div style="font-size:11px;color:var(--text3)">总盈亏</div><div style="font-size:18px;font-weight:500" id="fund-total-pl">0</div></div>
+          <div><div style="font-size:11px;color:var(--text3)">总投入</div><div style="font-size:18px;font-weight:500" id="fund-total-invest">0</div></div>
+          <div><div style="font-size:11px;color:var(--text3)">总盈利</div><div style="font-size:18px;font-weight:500" id="fund-total-sold">0</div></div>
+        </div>
+      </div>
+      <div class="add-row" style="flex-wrap:wrap;margin-top:12px;gap:8px">
+        <input class="inp" id="fund-name" placeholder="基金名称" style="flex:1;min-width:120px">
+        <select class="select-inp" id="fund-source" style="width:120px;min-height:44px">
+          <option value="">选择渠道</option>
+        </select>
+        <input class="inp" id="fund-amount" placeholder="金额" type="number" style="width:100px">
+        <input class="inp" id="fund-pl" placeholder="盈亏额" type="number" style="width:100px">
+        <input class="inp" id="fund-plp" placeholder="盈亏%" type="number" style="width:80px">
+        <input class="inp" id="fund-mgmt" placeholder="管理方式" style="width:120px">
+        <input class="inp" id="fund-plan" placeholder="下一步计划" style="flex:1;min-width:120px">
+        <input class="inp" id="fund-invest" placeholder="投入金额" type="number" style="width:100px">
+        <input class="inp" id="fund-sold" placeholder="卖出盈利" type="number" style="width:100px">
+        <button class="btn btn-sm" onclick="addFund()">添加基金</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-finance)"></span>固定收支</div>
+
+      <!-- 固定支出 -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">固定支出</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>款项</th>
+                <th>每月限额</th>
+                <th>每年限额</th>
+                <th>花销记录</th>
+                <th>已花销</th>
+                <th>总占比</th>
+                <th>月占比</th>
+                <th>来源</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fixed-exp-table"></tbody>
+          </table>
+        </div>
+        <div class="add-row" style="margin-top:8px;flex-wrap:wrap">
+          <input class="inp" id="fex-name" placeholder="款项" style="width:100px">
+          <input class="inp" id="fex-monthly" placeholder="每月限额" type="number" style="width:80px" oninput="syncYearlyFromMonthly()">
+          <input class="inp" id="fex-yearly" placeholder="每年限额" type="number" style="width:80px" oninput="syncMonthlyFromYearly()">
+          <input class="inp" id="fex-total-spent" placeholder="累计" type="number" style="width:70px">
+          <input class="inp" id="fex-current-spent" placeholder="本次" type="number" style="width:70px">
+          <input class="inp" id="fex-months" placeholder="月数" type="number" style="width:55px">
+          <select class="select-inp" id="fex-source" style="width:90px;min-height:44px"><option value="">来源</option></select>
+          <button class="btn btn-sm" onclick="addFixedExpense()">添加</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">累计 + 本次 = 新累计（保存后本次自动清空）；月数用于计算月占比</div>
+      </div>
+
+      <!-- 固定收入 -->
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">固定收入</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>款项</th>
+                <th>金额</th>
+                <th>周期</th>
+                <th>年总额</th>
+                <th>去向</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fixed-income-table"></tbody>
+          </table>
+        </div>
+        <div class="add-row" style="margin-top:8px;flex-wrap:wrap">
+          <input class="inp" id="fin-name" placeholder="款项" style="width:100px">
+          <input class="inp" id="fin-amount" placeholder="金额" type="number" style="width:80px">
+          <select class="select-inp" id="fin-period" style="width:80px;min-height:44px">
+            <option value="monthly">每月</option>
+            <option value="once">一次性</option>
+          </select>
+          <input class="inp" id="fin-dest" placeholder="去向" style="width:100px">
+          <button class="btn btn-sm" onclick="addFixedIncome()">添加</button>
+        </div>
+      </div>
+
+      <!-- 资金缺口/溢出 -->
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="display:flex;gap:16px;justify-content:center;align-items:center">
+          <div style="text-align:center;padding:12px 24px;border-radius:10px;background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.12);min-width:120px">
+            <div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:4px">资金缺口</div>
+            <div style="font-size:24px;font-weight:600;color:var(--red)" id="fund-gap">0.00</div>
+          </div>
+          <div style="font-size:20px;color:var(--text3)">/</div>
+          <div style="text-align:center;padding:12px 24px;border-radius:10px;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.12);min-width:120px">
+            <div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:4px">资金溢出</div>
+            <div style="font-size:24px;font-weight:600;color:var(--green)" id="fund-surplus">0.00</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">
+          公式：现有资金 + 固定收入 − 固定支出（按年计算）
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 时间 ===== -->
+  <div class="panel" id="panel-time">
+    <!-- SOP -->
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-time)"></span>SOP · 时间预算（必须做的事）</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px">以分钟为单位。填入每日额度自动算每周，填入每周额度自动算每日。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>项目</th>
+              <th>每日额度</th>
+              <th>每周额度</th>
+              <th>换算</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sop-table"></tbody>
+        </table>
+      </div>
+      <div class="add-row" style="margin-top:10px;flex-wrap:wrap">
+        <input class="inp" id="sop-name" placeholder="项目名称（如：睡觉、吃饭）" style="flex:1;min-width:120px">
+        <div class="time-hm-wrap">
+          <input class="inp" id="sop-daily-h" placeholder="时" type="number" min="0">
+          <span>:</span>
+          <input class="inp" id="sop-daily-m" placeholder="分" type="number" min="0" max="59">
+        </div>
+        <span style="color:var(--text3);font-size:13px">或</span>
+        <div class="time-hm-wrap">
+          <input class="inp" id="sop-weekly-h" placeholder="时" type="number" min="0">
+          <span>:</span>
+          <input class="inp" id="sop-weekly-m" placeholder="分" type="number" min="0" max="59">
+        </div>
+        <button class="btn btn-sm" onclick="addSopItem()">添加</button>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+        <div class="time-stat-box" style="flex:1;min-width:120px">
+          <div class="time-stat-value" id="sop-daily-total" style="color:var(--accent-time)">0</div>
+          <div class="time-stat-label">每日总占用</div>
+        </div>
+        <div class="time-stat-box" style="flex:1;min-width:120px">
+          <div class="time-stat-value" id="sop-weekly-total" style="color:var(--accent-time)">0</div>
+          <div class="time-stat-label">每周总占用</div>
+        </div>
+        <div class="time-stat-box" style="flex:1;min-width:120px;background:rgba(22,163,74,0.06);border-color:rgba(22,163,74,0.15)">
+          <div class="time-stat-value" id="sop-daily-remain" style="color:var(--green)">1440</div>
+          <div class="time-stat-label">每日剩余</div>
+        </div>
+        <div class="time-stat-box" style="flex:1;min-width:120px;background:rgba(22,163,74,0.06);border-color:rgba(22,163,74,0.15)">
+          <div class="time-stat-value" id="sop-weekly-remain" style="color:var(--green)">10080</div>
+          <div class="time-stat-label">每周剩余</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text3)">换算：1天=24小时(1440分) · 1周=168小时(10080分) · 1小时=60分</div>
+    </div>
+
+    <!-- 愿景版 -->
+    <div class="grid-2">
+      <!-- 固定支出 -->
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-time)"></span>愿景版 · 固定支出</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>项目</th>
+                <th>时间</th>
+                <th>已花销</th>
+                <th>占比</th>
+                <th>来源</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="vexp-table"></tbody>
+          </table>
+        </div>
+        <div class="add-row" style="margin-top:10px;flex-wrap:wrap">
+          <input class="inp" id="vexp-name" placeholder="项目名" style="width:100px">
+          <div class="time-hm-wrap">
+            <input class="inp" id="vexp-h" placeholder="时" type="number" min="0">
+            <span>:</span>
+            <input class="inp" id="vexp-m" placeholder="分" type="number" min="0" max="59">
+          </div>
+          <select class="select-inp" id="vexp-source" style="width:110px;min-height:44px">
+            <option value="saved">节省出来的（绿）</option>
+            <option value="free">自由支配（蓝）</option>
+            <option value="squeeze">挤占SOP（红）</option>
+          </select>
+          <button class="btn btn-sm" onclick="addVexp()">添加</button>
+        </div>
+      </div>
+
+      <!-- 固定收入 -->
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-time)"></span>愿景版 · 固定收入</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>项目</th>
+                <th>每日额度</th>
+                <th>每月额度</th>
+                <th>去处</th>
+                <th>价值度</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="vinc-table"></tbody>
+          </table>
+        </div>
+        <div class="add-row" style="margin-top:10px;flex-wrap:wrap">
+          <input class="inp" id="vinc-name" placeholder="项目名" style="width:100px">
+          <div class="time-hm-wrap">
+            <input class="inp" id="vinc-daily-h" placeholder="时" type="number" min="0">
+            <span>:</span>
+            <input class="inp" id="vinc-daily-m" placeholder="分" type="number" min="0" max="59">
+          </div>
+          <span style="color:var(--text3);font-size:13px">或</span>
+          <div class="time-hm-wrap">
+            <input class="inp" id="vinc-monthly-h" placeholder="时" type="number" min="0">
+            <span>:</span>
+            <input class="inp" id="vinc-monthly-m" placeholder="分" type="number" min="0" max="59">
+          </div>
+          <input class="inp" id="vinc-dest" placeholder="去处" style="width:80px">
+          <button class="btn btn-sm" onclick="addVinc()">添加</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 盈亏 -->
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-time)"></span>时间盈亏（剩余 + 固定收入 − 固定支出）</div>
+      <div style="display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap">
+        <div class="time-stat-box" style="min-width:140px">
+          <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px">每日盈亏</div>
+          <div class="time-stat-value" id="pl-daily">0</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px" id="pl-daily-hm">0时0分</div>
+        </div>
+        <div style="font-size:20px;color:var(--text3)">/</div>
+        <div class="time-stat-box" style="min-width:140px">
+          <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px">每周盈亏</div>
+          <div class="time-stat-value" id="pl-weekly">0</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px" id="pl-weekly-hm">0时0分</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">
+        公式：SOP每日/每周剩余 + 固定收入 − 固定支出 · 正数盈余，负数赤字
+      </div>
+    </div>
+
+    <!-- 实践版 -->
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-time)"></span>实践版 · 实际支出记录</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px">愿景版添加的项目自动同步至此。累计框+填入框确认后自动累加。偏离值=愿景−已支出。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>项目</th>
+              <th>愿景时间</th>
+              <th>累计已支出</th>
+              <th>本次填入</th>
+              <th>确认</th>
+              <th>偏离值</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="practice-table"></tbody>
+        </table>
+      </div>
+      <div class="add-row" style="margin-top:10px;flex-wrap:wrap">
+        <input class="inp" id="prac-name" placeholder="项目名（可独立添加）" style="flex:1;min-width:120px">
+        <div class="time-hm-wrap">
+          <input class="inp" id="prac-h" placeholder="时" type="number" min="0">
+          <span>:</span>
+          <input class="inp" id="prac-m" placeholder="分" type="number" min="0" max="59">
+        </div>
+        <button class="btn btn-sm" onclick="addPracticeItem()">独立添加</button>
+      </div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px">偏离值综合评分（越接近0星越多，最多5星）</div>
+        <div id="practice-stars" style="display:flex;justify-content:center;gap:4px"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px" id="practice-star-desc">暂无数据</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">历史记录</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'life-board-v8';
+let DATA = {
+  health: {
+    exercises: [
+      {id:'baduanjin',name:'八段锦',type:'daily',done:[]},
+      {id:'zhanzhuang',name:'站桩',type:'daily',done:[]},
+      {id:'swim',name:'游泳',type:'weekly-pool',done:[],pool:'main'},
+      {id:'badminton',name:'羽毛球',type:'weekly-pool',done:[],pool:'main'},
+      {id:'volleyball',name:'排球',type:'weekly-pool',done:[],pool:'main'},
+      {id:'walk',name:'散步',type:'weekly-pool',done:[],pool:'main'},
+      {id:'rehab-posture',name:'体态力线矫正',type:'weekly',done:[],freq:3,until:'2026-09-01'},
+      {id:'rehab-body',name:'体型管理运动',type:'weekly',done:[],freq:3,until:'2026-09-01'}
+    ],
+    sleep: [],
+    supplements: [
+      {id:'vd',name:'维生素D + 镁',freq:'daily',done:[]},
+      {id:'coq10',name:'辅酶Q10',freq:'daily',done:[]},
+      {id:'fishoil',name:'鱼油（每周3次）',freq:'weekly3',done:[]},
+      {id:'vb',name:'维生素B（每周3次，与鱼油隔开）',freq:'weekly3',done:[]},
+      {id:'iron',name:'补铁组合（月经后一周）',freq:'period',done:[]}
+    ],
+    therapies: [
+      {id:'sanfutie',name:'三伏贴',type:'weekly3',done:[]},
+      {id:'tuiganjing',name:'推肝经',type:'weekly3',done:[]},
+      {id:'rouduzi',name:'揉肚子',type:'weekly3',done:[]},
+      {id:'meirong',name:'美容（敷特制面膜）',type:'weekly3',done:[]}
+    ]
+  },
+  study: {
+    english: [
+      {id:'words',name:'背单词',done:[]},
+      {id:'listen',name:'听听力',done:[]},
+      {id:'speak',name:'练口语',done:[]},
+      {id:'read',name:'进行阅读',done:[]}
+    ],
+    anthroLinks: [],
+    articles: [],
+    skills: [
+      {id:'drive',name:'开车',done:false},
+      {id:'ai',name:'AI知识学习',done:false}
+    ],
+    schedule: {},
+    selectedDate: null
+  },
+  hobby: {
+    items: [],
+    events: []
+  },
+  finance: {
+    accounts: [
+      {id:'wechat', name:'微信', current:0},
+      {id:'alipay', name:'支付宝', current:0}
+    ],
+    transactions: [],
+    wishlist: [],
+    fundsTable: [],
+    fixedExpenses: [],
+    fixedIncome: []
+  },
+  time: {
+    sop: [],
+    visionExpense: [],
+    visionIncome: [],
+    practice: []
+  }
+};
+
+let txType = 'income';
+let editingFundIndex = null;
+let editingFixedExpenseIndex = null;
+let editingFixedIncomeIndex = null;
+
+function load() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const p = JSON.parse(s);
+      // Migrate from old monthly format
+      if (p.finance && p.finance.monthly && !p.finance.transactions) {
+        p.finance.transactions = [];
+        if (p.finance.monthly.income) {
+          p.finance.transactions.push({type:'income',name:'历史收入',amount:p.finance.monthly.income,date:today()});
+        }
+        if (p.finance.monthly.expense) {
+          p.finance.transactions.push({type:'expense',name:'历史支出',amount:p.finance.monthly.expense,date:today()});
+        }
+        delete p.finance.monthly;
+      }
+      // Migrate from old funds {wechat,alipay,bank} to accounts array
+      if (p.finance && p.finance.funds && !p.finance.accounts) {
+        p.finance.accounts = [
+          {id:'wechat', name:'微信', current: parseFloat(p.finance.funds.wechat)||0},
+          {id:'alipay', name:'支付宝', current: parseFloat(p.finance.funds.alipay)||0}
+        ];
+        if ((parseFloat(p.finance.funds.bank)||0) > 0) {
+          p.finance.accounts.push({id:'bank-0', name:'银行卡', current: parseFloat(p.finance.funds.bank)||0});
+        }
+        delete p.finance.funds;
+      }
+      // Ensure accounts exist
+      if (p.finance && !p.finance.accounts) {
+        p.finance.accounts = [
+          {id:'wechat', name:'微信', current:0},
+          {id:'alipay', name:'支付宝', current:0}
+        ];
+      }
+      // Migrate old fundsTable without source
+      if (p.finance && p.finance.fundsTable) {
+        p.finance.fundsTable.forEach(f => {
+          if (!f.source) f.source = '';
+        });
+      }
+      // Migrate old fixedExpenses format to new unified format
+      if (p.finance && p.finance.fixedExpenses && Array.isArray(p.finance.fixedExpenses.monthly)) {
+        const oldMonthly = p.finance.fixedExpenses.monthly || [];
+        const oldYearly = p.finance.fixedExpenses.yearly || [];
+        p.finance.fixedExpenses = [];
+        oldMonthly.forEach(item => {
+          p.finance.fixedExpenses.push({
+            id: item.id || Date.now() + Math.random(),
+            name: item.name,
+            monthlyLimit: parseFloat(item.limit) || 0,
+            yearlyLimit: (parseFloat(item.limit) || 0) * 12,
+            totalSpent: parseFloat(item.spent) || 0,
+            currentSpent: 0,
+            spentMonths: 1,
+            source: item.source || ''
+          });
+        });
+        oldYearly.forEach(item => {
+          const existing = p.finance.fixedExpenses.find(e => e.name === item.name + '（年）' || e.name === item.name);
+          if (!existing) {
+            p.finance.fixedExpenses.push({
+              id: item.id || Date.now() + Math.random(),
+              name: item.name,
+              monthlyLimit: (parseFloat(item.limit) || 0) / 12,
+              yearlyLimit: parseFloat(item.limit) || 0,
+              totalSpent: parseFloat(item.spent) || 0,
+              currentSpent: 0,
+              spentMonths: 1,
+              source: item.source || ''
+            });
+          }
+        });
+      }
+      // Ensure fixedExpenses is array
+      if (p.finance && !Array.isArray(p.finance.fixedExpenses)) {
+        p.finance.fixedExpenses = [];
+      }
+      if (p.finance && !p.finance.fixedIncome) {
+        p.finance.fixedIncome = [];
+      }
+      // Ensure time data exists
+      if (!p.time) {
+        p.time = { sop: [], visionExpense: [], visionIncome: [], practice: [] };
+      }
+      DATA = Object.assign(DATA, p);
+    }
+  } catch(e){}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); } catch(e){}
+}
+
+function today() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function thisWeek() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d.setDate(diff));
+  const y = mon.getFullYear();
+  const m = String(mon.getMonth() + 1).padStart(2, '0');
+  const dayStr = String(mon.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dayStr}`;
+}
+
+const fmtDate = (d) => d.slice(5);
+
+let lastDate = today();
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.tab-'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  renderAll();
+}
+
+setInterval(() => {
+  const current = today();
+  if (current !== lastDate) {
+    lastDate = current;
+    cleanOldData();
+    renderAll();
+  }
+}, 30000);
+
+function cleanOldData() {
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const cutoff = `${twoWeeksAgo.getFullYear()}-${String(twoWeeksAgo.getMonth()+1).padStart(2,'0')}-${String(twoWeeksAgo.getDate()).padStart(2,'0')}`;
+  DATA.health.exercises.forEach(ex => { ex.done = ex.done.filter(d => d >= cutoff); });
+  DATA.health.supplements.forEach(sup => { sup.done = sup.done.filter(d => d >= cutoff); });
+  DATA.health.therapies.forEach(t => { t.done = t.done.filter(d => d >= cutoff); });
+  DATA.study.english.forEach(item => { item.done = item.done.filter(d => d >= cutoff); });
+  DATA.health.sleep = DATA.health.sleep.filter(s => s.date >= cutoff);
+  save();
+}
+
+// ===================== MODAL =====================
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  editingFundIndex = null;
+  editingFixedExpenseIndex = null;
+  editingFixedIncomeIndex = null;
+}
+
+function showHealthHistory(date) {
+  const sections = [];
+  const exDone = DATA.health.exercises.filter(e => e.done.includes(date));
+  if (exDone.length > 0) {
+    sections.push(`<div class="modal-section"><div class="modal-section-title">运动</div>` +
+      exDone.map(e => `<div class="modal-item"><span class="status done"></span>${e.name}</div>`).join('') + `</div>`);
+  }
+  const sleep = DATA.health.sleep.filter(s => s.date === date);
+  if (sleep.length > 0) {
+    sections.push(`<div class="modal-section"><div class="modal-section-title">作息</div>` +
+      sleep.map(s => {
+        let tag = '';
+        if (s.tag === 'early') tag = '<span class="badge badge-green">早睡</span>';
+        else if (s.tag === 'late') tag = '<span class="badge badge-red">晚睡</span>';
+        else if (s.tag === 'lazy') tag = '<span class="badge badge-yellow">摸鱼</span>';
+        else if (s.tag === 'noon') tag = '<span class="badge badge-blue">子午觉</span>';
+        return `<div class="modal-item">${s.sleepTime?"睡"+s.sleepTime+" ":""}${s.wakeTime?"起"+s.wakeTime+" ":""}${tag}</div>`;
+      }).join('') + `</div>`);
+  }
+  const supDone = DATA.health.supplements.filter(s => s.done.includes(date));
+  if (supDone.length > 0) {
+    sections.push(`<div class="modal-section"><div class="modal-section-title">补剂</div>` +
+      supDone.map(s => `<div class="modal-item"><span class="status done"></span>${s.name}</div>`).join('') + `</div>`);
+  }
+  const therapyDone = DATA.health.therapies.filter(t => t.done.includes(date));
+  if (therapyDone.length > 0) {
+    sections.push(`<div class="modal-section"><div class="modal-section-title">特殊疗法</div>` +
+      therapyDone.map(t => `<div class="modal-item"><span class="status done"></span>${t.name}</div>`).join('') + `</div>`);
+  }
+  if (sections.length === 0) sections.push(`<div class="modal-empty">${date} 暂无打卡记录</div>`);
+  openModal(`${date} 养生记录`, sections.join(''));
+}
+
+// ===================== SLEEP TAG =====================
+function getSleepTag(sleepTime) {
+  if (!sleepTime) return 'noon';
+  const [h, m] = sleepTime.split(':').map(Number);
+  const total = h * 60 + m;
+  if (total >= 60 && total < 420) return 'late';
+  if (total >= 420 && total <= 720) return 'lazy';
+  return 'early';
+}
+
+// ===================== STATS =====================
+function renderStats() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const td = today();
+
+  const heatEl = document.getElementById('exercise-heat');
+  let heatHtml = '';
+  let exerciseDays = 0;
+  let exerciseTotal = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${monthPrefix}-${String(d).padStart(2, '0')}`;
+    const hasExercise = DATA.health.exercises.some(e => e.done.includes(dateStr));
+    if (hasExercise) { exerciseDays++; exerciseTotal++; }
+    const dayCount = DATA.health.exercises.reduce((sum, e) => sum + (e.done.includes(dateStr) ? 1 : 0), 0);
+    if (dayCount > 1) exerciseTotal += (dayCount - 1);
+    const isToday = dateStr === td;
+    heatHtml += `<div class="heat-cell ${hasExercise?'has-data':''} ${isToday?'today':''}" title="${dateStr}${hasExercise?' 有运动':''}">${hasExercise?dayCount:''}</div>`;
+  }
+  heatEl.innerHTML = heatHtml;
+  document.getElementById('stat-exercise-days').textContent = exerciseDays;
+  document.getElementById('stat-exercise-total').textContent = exerciseTotal;
+
+  const monthSleep = DATA.health.sleep.filter(s => s.date.startsWith(monthPrefix));
+  const counts = { early:0, late:0, lazy:0, noon:0 };
+  monthSleep.forEach(s => { if (counts[s.tag] !== undefined) counts[s.tag]++; });
+  const totalSleep = monthSleep.length;
+  const barEl = document.getElementById('sleep-bar');
+  const legendEl = document.getElementById('sleep-legend');
+
+  if (totalSleep === 0) {
+    barEl.innerHTML = '<div style="width:100%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3)">暂无记录</div>';
+    legendEl.innerHTML = '';
+  } else {
+    const colors = { early:'var(--green)', late:'var(--red)', lazy:'var(--yellow)', noon:'var(--blue)' };
+    const labels = { early:'早睡', late:'晚睡', lazy:'摸鱼', noon:'子午觉' };
+    let barHtml = '';
+    let legendHtml = '';
+    for (const [tag, count] of Object.entries(counts)) {
+      if (count > 0) {
+        const pct = Math.round((count / totalSleep) * 100);
+        barHtml += `<div class="sleep-segment" style="width:${pct}%;background:${colors[tag]}">${pct}%</div>`;
+        legendHtml += `<div class="sleep-legend-item"><span class="sleep-legend-dot" style="background:${colors[tag]}"></span>${labels[tag]} ${count}天</div>`;
+      }
+    }
+    barEl.innerHTML = barHtml;
+    legendEl.innerHTML = legendHtml;
+  }
+
+  document.getElementById('stat-sleep-days').textContent = totalSleep;
+  const earlyRate = totalSleep > 0 ? Math.round((counts.early / totalSleep) * 100) : 0;
+  document.getElementById('stat-sleep-rate').textContent = earlyRate + '%';
+}
+
+// ===================== HEALTH =====================
+function renderHealthCalendar() {
+  const el = document.getElementById('health-cal');
+  const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const headers = ['日','一','二','三','四','五','六'];
+  let html = headers.map(h => `<div class="cal-header">${h}</div>`).join('');
+  for (let i=0; i<firstDay; i++) html += '<div></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasData = DATA.health.sleep.some(s => s.date === dateStr) ||
+                    DATA.health.exercises.some(e => e.done.includes(dateStr)) ||
+                    DATA.health.supplements.some(s => s.done.includes(dateStr)) ||
+                    DATA.health.therapies.some(t => t.done.includes(dateStr));
+    const isToday = dateStr === today();
+    html += `<div class="cal-day ${isToday?'today':''} ${hasData?'has-event':''}" onclick="showHealthHistory('${dateStr}')">${d}${hasData?'<div class="cal-dot"></div>':''}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderExercises() {
+  const el = document.getElementById('exercise-list');
+  const weekStart = thisWeek();
+  const td = today();
+  let html = '';
+  let poolCount = 0;
+  DATA.health.exercises.forEach(ex => {
+    const thisWeekDone = ex.done.filter(d => d >= weekStart).length;
+    const isDone = ex.type === 'daily' ? ex.done.includes(td) :
+                   ex.type === 'weekly-pool' ? thisWeekDone >= 1 :
+                   thisWeekDone >= ex.freq;
+    if (ex.type === 'weekly-pool' && thisWeekDone > 0) poolCount += thisWeekDone;
+    const meta = ex.type === 'daily' ? (ex.done.includes(td)?'今日已打卡':'今日未打卡') :
+                 ex.type === 'weekly-pool' ? `本周${thisWeekDone}次` :
+                 (ex.until ? `本周${thisWeekDone}/${ex.freq}次 (至${ex.until})` : `本周${thisWeekDone}/${ex.freq}次`);
+    html += `<div class="check-row ${isDone?'done':''}">
+      <div class="check-box" onclick="toggleExercise('${ex.id}')">${isDone?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+      <div class="check-text">${ex.name}</div>
+      <div class="check-meta">${meta}</div>
+    </div>`;
+  });
+  el.innerHTML = html;
+
+  const mainPool = ['swim','badminton','volleyball','walk'];
+  const mainDone = mainPool.reduce((sum,id) => {
+    const ex = DATA.health.exercises.find(e=>e.id===id);
+    return sum + (ex ? ex.done.filter(d=>d>=weekStart).length : 0);
+  }, 0);
+  const progress = Math.min(100, (mainDone/3)*100);
+  document.getElementById('exercise-progress-text').textContent = `${mainDone}/3 次`;
+  document.getElementById('exercise-progress-bar').style.width = progress+'%';
+  document.getElementById('ach-exercise').textContent = mainDone;
+}
+
+function toggleExercise(id) {
+  const ex = DATA.health.exercises.find(e => e.id === id);
+  const d = today();
+  if (ex.done.includes(d)) ex.done = ex.done.filter(x => x !== d);
+  else ex.done.push(d);
+  save(); renderExercises(); renderHealthCalendar(); renderStats();
+}
+
+function renderSleep() {
+  const el = document.getElementById('sleep-records');
+  const recent = DATA.health.sleep.slice(-7).reverse();
+  if (recent.length === 0) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">暂无记录</div>'; return; }
+  el.innerHTML = recent.map(s => {
+    let badge = '';
+    if (s.tag === 'early') badge = '<span class="badge badge-green">早睡</span>';
+    else if (s.tag === 'late') badge = '<span class="badge badge-red">晚睡</span>';
+    else if (s.tag === 'lazy') badge = '<span class="badge badge-yellow">摸鱼</span>';
+    else if (s.tag === 'noon') badge = '<span class="badge badge-blue">子午觉</span>';
+    return `<div class="check-row">
+      <div class="check-text">${fmtDate(s.date)} · ${s.sleepTime?"睡"+s.sleepTime+" ":""}${s.wakeTime?"起"+s.wakeTime:""}</div>
+      ${badge}
+      <div class="delete-btn" onclick="deleteSleep('${s.date}')">删除</div>
+    </div>`;
+  }).join('');
+  const earlyCount = DATA.health.sleep.filter(s => s.tag === 'early').length;
+  document.getElementById('ach-early').textContent = earlyCount;
+}
+
+function recordSleep() {
+  const sleepTime = document.getElementById('sleep-time').value;
+  const wakeTime = document.getElementById('wake-time').value;
+  if (!sleepTime) return alert('请填写入睡时间');
+  const tag = getSleepTag(sleepTime);
+  DATA.health.sleep.push({date:today(), sleepTime, wakeTime, tag});
+  document.getElementById('sleep-time').value = '';
+  document.getElementById('wake-time').value = '';
+  save(); renderSleep(); renderHealthCalendar(); renderStats();
+}
+
+function recordNoonNap() {
+  DATA.health.sleep.push({date:today(), sleepTime:'', wakeTime:'', tag:'noon'});
+  save(); renderSleep(); renderHealthCalendar(); renderStats();
+}
+
+function deleteSleep(date) {
+  DATA.health.sleep = DATA.health.sleep.filter(s => s.date !== date);
+  save(); renderSleep(); renderStats();
+}
+
+function renderSupplements() {
+  const el = document.getElementById('supplement-list');
+  const weekStart = thisWeek();
+  const td = today();
+  el.innerHTML = DATA.health.supplements.map(sup => {
+    const thisWeekDone = sup.done.filter(d => d >= weekStart).length;
+    const isTodayDone = sup.done.includes(td);
+    const isDone = sup.freq === 'daily' ? isTodayDone : false;
+    const meta = sup.freq === 'daily' ? '每日' : 
+                 sup.freq === 'weekly3' ? `本周 ${thisWeekDone}/3 次${thisWeekDone>=3?' ✅':''}` : 
+                 '按需';
+    return `<div class="check-row ${isDone?'done':''}">
+      <div class="check-box" onclick="toggleSupplement('${sup.id}')">${isTodayDone?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+      <div class="check-text">${sup.name}</div>
+      <div class="check-meta">${meta}</div>
+    </div>`;
+  }).join('');
+  const supCount = DATA.health.supplements.reduce((sum, s) => sum + s.done.length, 0);
+  document.getElementById('ach-sup').textContent = supCount;
+}
+function toggleSupplement(id) {
+  const sup = DATA.health.supplements.find(s => s.id === id);
+  const d = today();
+  if (sup.done.includes(d)) sup.done = sup.done.filter(x => x !== d);
+  else sup.done.push(d);
+  save(); renderSupplements(); renderHealthCalendar();
+}
+
+function renderTherapies() {
+  const el = document.getElementById('therapy-list');
+  const weekStart = thisWeek();
+  const td = today();
+  el.innerHTML = DATA.health.therapies.map(t => {
+    const thisWeekDone = t.done.filter(d => d >= weekStart).length;
+    const isTodayDone = t.done.includes(td);
+    return `<div class="check-row">
+      <div class="check-box" onclick="toggleTherapy('${t.id}')">${isTodayDone?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+      <div class="check-text">${t.name}</div>
+      <div class="check-meta">本周 ${thisWeekDone}/3 次${thisWeekDone>=3?' ✅':''}</div>
+    </div>`;
+  }).join('');
+}
+function toggleTherapy(id) {
+  const t = DATA.health.therapies.find(x => x.id === id);
+  const d = today();
+  if (t.done.includes(d)) t.done = t.done.filter(x => x !== d);
+  else t.done.push(d);
+  save(); renderTherapies(); renderHealthCalendar();
+}
+
+function updateAchievements() {
+  const dates = new Set();
+  DATA.health.exercises.forEach(e => e.done.forEach(d => dates.add(d)));
+  DATA.health.sleep.forEach(s => dates.add(s.date));
+  DATA.health.supplements.forEach(s => s.done.forEach(d => dates.add(d)));
+  DATA.health.therapies.forEach(t => t.done.forEach(d => dates.add(d)));
+  const sorted = Array.from(dates).sort();
+  let continuous = 0;
+  const td = today();
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const d = new Date(sorted[i]); const expected = new Date(td);
+    expected.setDate(expected.getDate() - (sorted.length - 1 - i));
+    if (d.toISOString().split('T')[0] === expected.toISOString().split('T')[0]) continuous++;
+    else break;
+  }
+  document.getElementById('ach-continuous').textContent = continuous;
+}
+
+// ===================== STUDY =====================
+function renderStudyCalendar() {
+  const el = document.getElementById('study-cal');
+  const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const headers = ['日','一','二','三','四','五','六'];
+  let html = headers.map(h => `<div class="cal-header">${h}</div>`).join('');
+  for (let i=0; i<firstDay; i++) html += '<div></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasEvent = DATA.study.schedule[dateStr] && DATA.study.schedule[dateStr].length > 0;
+    const isToday = dateStr === today();
+    const isSelected = DATA.study.selectedDate === dateStr;
+    html += `<div class="cal-day ${isToday?'today':''} ${hasEvent?'has-event':''} ${isSelected?'selected':''}" onclick="selectStudyDate('${dateStr}')">${d}</div>`;
+  }
+  el.innerHTML = html;
+  renderStudySchedules();
+}
+
+function selectStudyDate(date) {
+  DATA.study.selectedDate = date;
+  save();
+  renderStudyCalendar();
+  document.getElementById('study-cal-label').textContent = `已选 ${date}，输入日程后点击添加`;
+}
+
+function renderStudySchedules() {
+  const el = document.getElementById('study-schedules');
+  const date = DATA.study.selectedDate || today();
+  const items = DATA.study.schedule[date] || [];
+  if (items.length === 0) { el.innerHTML = `<div style="color:var(--text3);font-size:13px;padding:4px 0">${date} 暂无日程</div>`; return; }
+  el.innerHTML = items.map((item, i) => `<div class="schedule-item ${item.done?'done':''}">
+    <div class="check-box" style="width:16px;height:16px;flex-shrink:0" onclick="toggleSchedule('${date}',${i})">${item.done?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+    <span class="schedule-text" contenteditable="true" onblur="editSchedule('${date}',${i},this)">${escapeHtml(item.text)}</span>
+    <div class="delete-btn" onclick="deleteStudySchedule('${date}',${i})" style="opacity:1">删除</div>
+  </div>`).join('');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function addStudySchedule() {
+  const date = DATA.study.selectedDate || today();
+  const text = document.getElementById('study-schedule-text').value.trim();
+  if (!text) return;
+  if (!DATA.study.schedule[date]) DATA.study.schedule[date] = [];
+  DATA.study.schedule[date].push({text, done:false});
+  document.getElementById('study-schedule-text').value = '';
+  save(); renderStudyCalendar();
+}
+
+function toggleSchedule(date, i) {
+  DATA.study.schedule[date][i].done = !DATA.study.schedule[date][i].done;
+  save(); renderStudySchedules();
+}
+
+function editSchedule(date, i, el) {
+  const text = el.textContent.trim();
+  if (!text) return;
+  DATA.study.schedule[date][i].text = text;
+  save();
+}
+
+function deleteStudySchedule(date, i) {
+  DATA.study.schedule[date].splice(i, 1);
+  if (DATA.study.schedule[date].length === 0) delete DATA.study.schedule[date];
+  save(); renderStudyCalendar();
+}
+
+function renderEnglish() {
+  const el = document.getElementById('kb-english');
+  const weekStart = thisWeek();
+  const td = today();
+  el.innerHTML = DATA.study.english.map(item => {
+    const isTodayDone = item.done.includes(td);
+    const thisWeekDone = item.done.filter(d => d >= weekStart).length;
+    return `<div class="kanban-item">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="check-box" style="width:16px;height:16px;flex-shrink:0" onclick="toggleEnglish('${item.id}')">${isTodayDone?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+        <span style="${isTodayDone?'text-decoration:line-through;color:var(--text3)':''}">${item.name}</span>
+        ${isTodayDone?'<span class="today-mark">今日已打卡</span>':''}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">本周 ${thisWeekDone}/5 次</div>
+      <div class="kb-progress"><div class="kb-bar" style="width:${Math.min(100,thisWeekDone*20)}%;background:var(--accent-study)"></div></div>
+    </div>`;
+  }).join('');
+}
+function toggleEnglish(id) {
+  const item = DATA.study.english.find(i => i.id === id);
+  const d = today();
+  if (item.done.includes(d)) item.done = item.done.filter(x => x !== d);
+  else item.done.push(d);
+  save(); renderEnglish();
+}
+
+function renderKanban() {
+  renderEnglish();
+  const anthroEl = document.getElementById('kb-anthro');
+  anthroEl.innerHTML = DATA.study.anthroLinks.map((link, i) => `<div class="kanban-item">
+    <a href="${link}" target="_blank" class="link-url" style="font-size:13px">${link}</a>
+    <div class="delete-btn" onclick="deleteAnthro(${i})" style="opacity:1">删除</div>
+  </div>`).join('') || '<div style="font-size:13px;color:var(--text3);padding:8px">暂无链接</div>';
+  const artEl = document.getElementById('kb-article');
+  artEl.innerHTML = DATA.study.articles.map(art => `<div class="kanban-item">
+    <div style="font-weight:500;font-size:13px">${art.name}</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px">${art.process} · ${art.deadline}</div>
+    <div class="kb-progress"><div class="kb-bar" style="width:${art.progress}%;background:var(--accent-study)"></div></div>
+    <div style="font-size:11px;color:var(--text3)">${art.progress}%</div>
+  </div>`).join('') || '<div style="font-size:13px;color:var(--text3);padding:8px">暂无项目</div>';
+}
+
+function addAnthroLink() {
+  const url = document.getElementById('anthro-url').value.trim();
+  if (!url) return;
+  DATA.study.anthroLinks.push(url);
+  document.getElementById('anthro-url').value = '';
+  save(); renderKanban();
+}
+function deleteAnthro(i) { DATA.study.anthroLinks.splice(i,1); save(); renderKanban(); }
+
+function renderArticles() {
+  const el = document.getElementById('article-table');
+  el.innerHTML = DATA.study.articles.map((art, i) => `<tr>
+    <td>${art.name}</td>
+    <td>${art.process}</td>
+    <td>${art.deadline}</td>
+    <td>
+      <div class="progress"><div class="progress-bar" style="width:${art.progress}%;background:var(--accent-study)"></div></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${art.progress}%</div>
+    </td>
+    <td><div class="delete-btn" onclick="deleteArticle(${i})">删除</div></td>
+  </tr>`).join('');
+  renderKanban();
+}
+function addArticle() {
+  const name = document.getElementById('art-name').value.trim();
+  const process = document.getElementById('art-process').value.trim();
+  const deadline = document.getElementById('art-deadline').value.trim();
+  const progress = parseInt(document.getElementById('art-progress').value) || 0;
+  if (!name) return;
+  DATA.study.articles.push({name, process, deadline, progress});
+  ['art-name','art-process','art-deadline','art-progress'].forEach(id => document.getElementById(id).value='');
+  save(); renderArticles();
+}
+function deleteArticle(i) { DATA.study.articles.splice(i,1); save(); renderArticles(); }
+
+function renderSkills() {
+  const el = document.getElementById('skill-list');
+  el.innerHTML = DATA.study.skills.map((skill, i) => `<div class="check-row ${skill.done?'done':''}">
+    <div class="check-box" onclick="toggleSkill(${i})">${skill.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+    <div class="check-text">${skill.name}</div>
+    <div class="delete-btn" onclick="deleteSkill(${i})">删除</div>
+  </div>`).join('');
+}
+function toggleSkill(i) { DATA.study.skills[i].done = !DATA.study.skills[i].done; save(); renderSkills(); }
+function addSkill() {
+  const name = document.getElementById('skill-name').value.trim();
+  if (!name) return;
+  DATA.study.skills.push({name, done:false});
+  document.getElementById('skill-name').value = '';
+  save(); renderSkills();
+}
+function deleteSkill(i) { DATA.study.skills.splice(i,1); save(); renderSkills(); }
+
+// ===================== HOBBY =====================
+function renderHobby() {
+  const el = document.getElementById('hobby-list');
+  el.innerHTML = DATA.hobby.items.map((item, i) => `<div class="check-row ${item.done?'done':''}">
+    <div class="check-box" onclick="toggleHobby(${i})">${item.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+    <div class="check-text">${item.name}</div>
+    <div class="delete-btn" onclick="deleteHobbyItem(${i})">删除</div>
+  </div>`).join('');
+}
+function toggleHobby(i) { DATA.hobby.items[i].done = !DATA.hobby.items[i].done; save(); renderHobby(); }
+function addHobby() {
+  const name = document.getElementById('hobby-name').value.trim();
+  if (!name) return;
+  DATA.hobby.items.push({name, done:false});
+  document.getElementById('hobby-name').value = '';
+  save(); renderHobby();
+}
+function deleteHobbyItem(i) { DATA.hobby.items.splice(i,1); save(); renderHobby(); }
+
+function renderHobbyEvents() {
+  const el = document.getElementById('hobby-events');
+  if (DATA.hobby.events.length === 0) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:4px 0">暂无特殊事项</div>'; return; }
+  el.innerHTML = DATA.hobby.events.map((ev, i) => `<div class="check-row">
+    <div class="check-text"><strong>${ev.name}</strong> · ${ev.place} · ${ev.time}</div>
+    <div class="delete-btn" onclick="deleteHobbyEvent(${i})">删除</div>
+  </div>`).join('');
+}
+function addHobbyEvent() {
+  const name = document.getElementById('event-name').value.trim();
+  const place = document.getElementById('event-place').value.trim();
+  const time = document.getElementById('event-time').value.trim();
+  if (!name) return;
+  DATA.hobby.events.push({name, place, time});
+  ['event-name','event-place','event-time'].forEach(id => document.getElementById(id).value='');
+  save(); renderHobbyEvents();
+}
+function deleteHobbyEvent(i) { DATA.hobby.events.splice(i,1); save(); renderHobbyEvents(); }
+
+// ===================== FINANCE =====================
+function setTxType(type) {
+  txType = type;
+  document.getElementById('tx-btn-income').classList.toggle('active', type === 'income');
+  document.getElementById('tx-btn-income').classList.toggle('income', type === 'income');
+  document.getElementById('tx-btn-expense').classList.toggle('active', type === 'expense');
+  document.getElementById('tx-btn-expense').classList.toggle('expense', type === 'expense');
+}
+
+function renderTransactions() {
+  const listEl = document.getElementById('tx-list');
+  const txs = DATA.finance.transactions.slice().reverse();
+
+  if (txs.length === 0) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">暂无记录，添加一笔吧</div>';
+  } else {
+    listEl.innerHTML = txs.map((tx, i) => {
+      const idx = DATA.finance.transactions.length - 1 - i;
+      const icon = tx.type === 'income' ? '+' : '−';
+      return `<div class="tx-row">
+        <div class="tx-icon ${tx.type}">${icon}</div>
+        <div class="tx-info">
+          <div class="tx-name">${tx.name}</div>
+          <div class="tx-date">${tx.date}</div>
+        </div>
+        <div class="tx-amount ${tx.type}">${tx.type==='income'?'+':'−'}${parseFloat(tx.amount).toFixed(2)}</div>
+        <div class="delete-btn" onclick="deleteTransaction(${idx})" style="opacity:1">删除</div>
+      </div>`;
+    }).join('');
+  }
+
+  const income = DATA.finance.transactions.filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
+  const expense = DATA.finance.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + parseFloat(t.amount), 0);
+  const balance = income - expense;
+
+  document.getElementById('tx-income').textContent = income.toFixed(2);
+  document.getElementById('tx-expense').textContent = expense.toFixed(2);
+  document.getElementById('tx-balance').textContent = balance.toFixed(2);
+  document.getElementById('tx-balance').style.color = balance >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+function addTransaction() {
+  const name = document.getElementById('tx-name').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  const date = document.getElementById('tx-date').value || today();
+  if (!name || !amount || amount <= 0) return alert('请填写名称和金额');
+  DATA.finance.transactions.push({type:txType, name, amount, date});
+  document.getElementById('tx-name').value = '';
+  document.getElementById('tx-amount').value = '';
+  document.getElementById('tx-date').value = '';
+  save(); renderTransactions(); renderFinanceSummary();
+}
+
+function deleteTransaction(i) {
+  DATA.finance.transactions.splice(i, 1);
+  save(); renderTransactions(); renderFinanceSummary();
+}
+
+function getAccountFundTotal(accountId) {
+  return DATA.finance.fundsTable
+    .filter(f => f.source === accountId)
+    .reduce((s, f) => s + (parseFloat(f.amount)||0), 0);
+}
+
+function renderAccounts() {
+  const el = document.getElementById('accounts-list');
+  const sourceSelect = document.getElementById('fund-source');
+  let html = '';
+  let sourceOptions = '<option value="">选择渠道</option>';
+  let grandTotal = 0;
+
+  DATA.finance.accounts.forEach((acc, idx) => {
+    const fundTotal = getAccountFundTotal(acc.id);
+    const total = fundTotal + (parseFloat(acc.current)||0);
+    grandTotal += total;
+    const isBank = acc.id.startsWith('bank');
+    html += `<div class="account-item">
+      <div class="account-name">
+        <span>${acc.name}</span>
+        ${isBank ? `<span class="account-delete" onclick="deleteBankAccount(${idx})">删除</span>` : ''}
+      </div>
+      <div class="account-row">
+        <label>基金</label>
+        <span class="account-fund">¥${fundTotal.toFixed(2)}</span>
+      </div>
+      <div class="account-row">
+        <label>活期</label>
+        <input class="inp inp-sm" type="number" placeholder="0.00" value="${acc.current || ''}" onchange="saveAccountCurrent('${acc.id}', this.value)">
+      </div>
+      <div class="account-row">
+        <label>总额</label>
+        <span class="account-total">¥${total.toFixed(2)}</span>
+      </div>
+    </div>`;
+    sourceOptions += `<option value="${acc.id}">${acc.name}</option>`;
+  });
+
+  el.innerHTML = html;
+  if (sourceSelect) sourceSelect.innerHTML = sourceOptions;
+  document.getElementById('fund-total').textContent = grandTotal.toFixed(2);
+  updateFixedSourceOptions();
+  return grandTotal;
+}
+
+function renderFinanceSummary() {
+  const totalFunds = renderAccounts();
+  const income = DATA.finance.transactions.filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
+  const expense = DATA.finance.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + parseFloat(t.amount), 0);
+  const monthlyBalance = income - expense; // 本月结余
+  const wishTotal = DATA.finance.wishlist.reduce((s, w) => s + w.price, 0);
+  const estBalance = totalFunds + monthlyBalance - wishTotal; // 估计结余 = 现有资金 + 本月结余 - 预计支出
+  const estEl = document.getElementById('est-balance');
+  estEl.textContent = '¥' + estBalance.toFixed(2);
+  estEl.className = estBalance >= 0 ? 'fund-positive' : 'fund-negative';
+  renderGapSurplus();
+}
+
+function saveAccountCurrent(id, value) {
+  const acc = DATA.finance.accounts.find(a => a.id === id);
+  if (acc) { acc.current = parseFloat(value) || 0; save(); renderFinanceSummary(); }
+}
+
+function addBankAccount() {
+  const name = document.getElementById('new-bank-name').value.trim();
+  if (!name) return alert('请输入银行卡名称');
+  const existingBanks = DATA.finance.accounts.filter(a => a.id.startsWith('bank')).length;
+  DATA.finance.accounts.push({id:'bank-' + existingBanks, name: name, current:0});
+  document.getElementById('new-bank-name').value = '';
+  save(); renderFinanceSummary();
+}
+
+function deleteBankAccount(index) {
+  if (!confirm('确定删除该银行卡账户吗？')) return;
+  const acc = DATA.finance.accounts[index];
+  DATA.finance.fundsTable.forEach(f => { if (f.source === acc.id) f.source = ''; });
+  DATA.finance.fixedExpenses.forEach(item => { if (item.source === acc.id) item.source = ''; });
+  DATA.finance.accounts.splice(index, 1);
+  save(); renderFinanceSummary(); renderFunds(); renderFixedExpenses(); renderGapSurplus();
+}
+
+function addWish() {
+  const name = document.getElementById('wish-name').value.trim();
+  const price = parseFloat(document.getElementById('wish-price').value) || 0;
+  if (!name) return;
+  DATA.finance.wishlist.push({name, price});
+  document.getElementById('wish-name').value = '';
+  document.getElementById('wish-price').value = '';
+  save(); renderWishlist(); renderFinanceSummary();
+}
+function deleteWish(i) { DATA.finance.wishlist.splice(i,1); save(); renderWishlist(); renderFinanceSummary(); }
+
+function renderWishlist() {
+  const wishEl = document.getElementById('wishlist');
+  wishEl.innerHTML = DATA.finance.wishlist.map((w, i) => `<div class="check-row">
+    <div class="check-text">${w.name}</div>
+    <div class="check-meta">¥${w.price.toFixed(2)}</div>
+    <div class="delete-btn" onclick="deleteWish(${i})">删除</div>
+  </div>`).join('');
+  const wishTotal = DATA.finance.wishlist.reduce((s, w) => s + w.price, 0);
+  document.getElementById('wish-total').textContent = '¥' + wishTotal.toFixed(2);
+}
+
+function renderFunds() {
+  const fundEl = document.getElementById('fund-table');
+  fundEl.innerHTML = DATA.finance.fundsTable.map((f, i) => {
+    const acc = DATA.finance.accounts.find(a => a.id === f.source);
+    const sourceName = acc ? acc.name : (f.source || '-');
+    return `<tr>
+      <td>${f.name}</td>
+      <td>${sourceName}</td>
+      <td>${f.amount}</td>
+      <td class="${f.pl>=0?'fund-positive':'fund-negative'}">${f.pl>=0?'+':''}${f.pl}</td>
+      <td class="${f.plp>=0?'fund-positive':'fund-negative'}">${f.plp>=0?'+':''}${f.plp}%</td>
+      <td>${f.management}</td>
+      <td>${f.plan}</td>
+      <td>${f.invested}</td>
+      <td>${f.sold}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:flex-end">
+          <div class="edit-btn" onclick="openEditFundModal(${i})">编辑</div>
+          <div class="delete-btn" onclick="deleteFund(${i})">删除</div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const currentTotal = DATA.finance.fundsTable.reduce((s, f) => s + (parseFloat(f.amount)||0), 0);
+  const totalInvest = DATA.finance.fundsTable.reduce((s, f) => s + (parseFloat(f.invested)||0), 0);
+  const totalSold = DATA.finance.fundsTable.reduce((s, f) => s + (parseFloat(f.sold)||0), 0);
+  const totalPL = DATA.finance.fundsTable.reduce((s, f) => s + (parseFloat(f.pl)||0), 0);
+
+  document.getElementById('fund-current-total').textContent = currentTotal.toFixed(2);
+  const plEl = document.getElementById('fund-total-pl');
+  plEl.textContent = (totalPL>=0?'+':'') + totalPL.toFixed(2);
+  plEl.className = totalPL >= 0 ? 'fund-positive' : 'fund-negative';
+  document.getElementById('fund-total-invest').textContent = totalInvest.toFixed(2);
+  document.getElementById('fund-total-sold').textContent = totalSold.toFixed(2);
+}
+
+function openEditFundModal(i) {
+  editingFundIndex = i;
+  const f = DATA.finance.fundsTable[i];
+  let sourceOptions = '<option value="">选择渠道</option>';
+  DATA.finance.accounts.forEach(a => {
+    sourceOptions += `<option value="${a.id}" ${f.source===a.id?'selected':''}>${a.name}</option>`;
+  });
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="inp" id="edit-fund-name" placeholder="基金名称">
+      <select class="select-inp" id="edit-fund-source">${sourceOptions}</select>
+      <input class="inp" id="edit-fund-amount" placeholder="金额">
+      <input class="inp" id="edit-fund-pl" placeholder="盈亏额" type="number">
+      <input class="inp" id="edit-fund-plp" placeholder="盈亏%" type="number">
+      <input class="inp" id="edit-fund-mgmt" placeholder="管理方式">
+      <input class="inp" id="edit-fund-plan" placeholder="下一步计划">
+      <input class="inp" id="edit-fund-invest" placeholder="投入金额">
+      <input class="inp" id="edit-fund-sold" placeholder="卖出盈利">
+      <button class="btn" onclick="saveFundEdit()">保存修改</button>
+    </div>
+  `;
+  openModal('编辑基金', html);
+  document.getElementById('edit-fund-name').value = f.name;
+  document.getElementById('edit-fund-source').value = f.source || '';
+  document.getElementById('edit-fund-amount').value = f.amount;
+  document.getElementById('edit-fund-pl').value = f.pl;
+  document.getElementById('edit-fund-plp').value = f.plp;
+  document.getElementById('edit-fund-mgmt').value = f.management;
+  document.getElementById('edit-fund-plan').value = f.plan;
+  document.getElementById('edit-fund-invest').value = f.invested;
+  document.getElementById('edit-fund-sold').value = f.sold;
+}
+
+function saveFundEdit() {
+  if (editingFundIndex === null) return;
+  const i = editingFundIndex;
+  const name = document.getElementById('edit-fund-name').value.trim();
+  if (!name) return;
+  DATA.finance.fundsTable[i] = {
+    name,
+    source: document.getElementById('edit-fund-source').value || '',
+    amount: document.getElementById('edit-fund-amount').value || '0',
+    pl: parseFloat(document.getElementById('edit-fund-pl').value) || 0,
+    plp: parseFloat(document.getElementById('edit-fund-plp').value) || 0,
+    management: document.getElementById('edit-fund-mgmt').value || '-',
+    plan: document.getElementById('edit-fund-plan').value || '-',
+    invested: document.getElementById('edit-fund-invest').value || '0',
+    sold: document.getElementById('edit-fund-sold').value || '0'
+  };
+  editingFundIndex = null;
+  closeModal();
+  save();
+  renderFunds();
+  renderFinanceSummary();
+}
+
+function addFund() {
+  const name = document.getElementById('fund-name').value.trim();
+  if (!name) return;
+  const source = document.getElementById('fund-source').value || '';
+  const amount = document.getElementById('fund-amount').value || '0';
+  const pl = parseFloat(document.getElementById('fund-pl').value) || 0;
+  const plp = parseFloat(document.getElementById('fund-plp').value) || 0;
+  const management = document.getElementById('fund-mgmt').value || '-';
+  const plan = document.getElementById('fund-plan').value || '-';
+  const invested = document.getElementById('fund-invest').value || '0';
+  const sold = document.getElementById('fund-sold').value || '0';
+  DATA.finance.fundsTable.push({name, source, amount, pl, plp, management, plan, invested, sold});
+  ['fund-name','fund-source','fund-amount','fund-pl','fund-plp','fund-mgmt','fund-plan','fund-invest','fund-sold'].forEach(id => document.getElementById(id).value='');
+  save(); renderFunds(); renderFinanceSummary();
+}
+function deleteFund(i) { DATA.finance.fundsTable.splice(i,1); save(); renderFunds(); renderFinanceSummary(); }
+
+// ===================== FIXED EXPENSES & INCOME =====================
+function updateFixedSourceOptions() {
+  const el = document.getElementById('fex-source');
+  if (!el) return;
+  let opts = '<option value="">来源</option>';
+  DATA.finance.accounts.forEach(a => {
+    opts += `<option value="${a.id}">${a.name}</option>`;
+  });
+  opts += '<option value="fixed-income">固定收入</option>';
+  el.innerHTML = opts;
+}
+
+function getSourceName(sourceId) {
+  if (sourceId === 'fixed-income') return '固定收入';
+  const acc = DATA.finance.accounts.find(a => a.id === sourceId);
+  return acc ? acc.name : (sourceId || '-');
+}
+
+function syncYearlyFromMonthly() {
+  const monthly = parseFloat(document.getElementById('fex-monthly').value);
+  if (!isNaN(monthly)) {
+    document.getElementById('fex-yearly').value = (monthly * 12).toFixed(2);
+  }
+}
+
+function syncMonthlyFromYearly() {
+  const yearly = parseFloat(document.getElementById('fex-yearly').value);
+  if (!isNaN(yearly)) {
+    document.getElementById('fex-monthly').value = (yearly / 12).toFixed(2);
+  }
+}
+
+function renderFixedExpenses() {
+  updateFixedSourceOptions();
+  const el = document.getElementById('fixed-exp-table');
+  el.innerHTML = DATA.finance.fixedExpenses.map((item, i) => {
+    const yearlyLimit = parseFloat(item.yearlyLimit) || 0;
+    const monthlyLimit = parseFloat(item.monthlyLimit) || 0;
+    const totalSpent = parseFloat(item.totalSpent) || 0;
+    const currentSpent = parseFloat(item.currentSpent) || 0;
+    const spentMonths = parseInt(item.spentMonths) || 1;
+    const displaySpent = totalSpent + currentSpent;
+
+    const totalPct = yearlyLimit > 0 ? Math.round((displaySpent / yearlyLimit) * 100) : 0;
+    const totalPctColor = totalPct >= 100 ? 'var(--red)' : (totalPct >= 80 ? 'var(--yellow)' : 'var(--green)');
+
+    const avgMonthly = spentMonths > 0 ? displaySpent / spentMonths : 0;
+    const monthPct = monthlyLimit > 0 ? Math.round((avgMonthly / monthlyLimit) * 100) : 0;
+    const monthPctColor = monthPct >= 100 ? 'var(--red)' : (monthPct >= 80 ? 'var(--yellow)' : 'var(--green)');
+
+    return `<tr>
+      <td>${item.name}</td>
+      <td>¥${monthlyLimit.toFixed(2)}</td>
+      <td>¥${yearlyLimit.toFixed(2)}</td>
+      <td style="font-size:12px">
+        <span style="color:var(--text3)">累</span>¥${totalSpent.toFixed(2)}
+        ${currentSpent !== 0 ? `<span style="color:var(--text3)"> + </span><span style="color:${currentSpent<0?'var(--red)':'var(--green)'}">¥${currentSpent.toFixed(2)}</span>` : ''}
+        <span style="color:var(--text3)"> / </span><span style="color:var(--accent-study)">${spentMonths}月</span>
+      </td>
+      <td style="color:${displaySpent<0?'var(--red)':'var(--text)'}">¥${displaySpent.toFixed(2)}</td>
+      <td>
+        <div class="progress"><div class="progress-bar" style="width:${Math.min(100,totalPct)}%;background:${totalPctColor}"></div></div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">${totalPct}%</div>
+      </td>
+      <td>
+        <div class="progress"><div class="progress-bar" style="width:${Math.min(100,monthPct)}%;background:${monthPctColor}"></div></div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">${monthPct}%</div>
+      </td>
+      <td>${getSourceName(item.source)}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:flex-end">
+          <div class="edit-btn" onclick="openEditFixedExpense(${i})">编辑</div>
+          <div class="delete-btn" onclick="deleteFixedExpense(${i})">删除</div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="color:var(--text3);font-size:13px">暂无固定支出</td></tr>';
+}
+
+function addFixedExpense() {
+  const name = document.getElementById('fex-name').value.trim();
+  const monthlyLimit = parseFloat(document.getElementById('fex-monthly').value) || 0;
+  const yearlyLimit = parseFloat(document.getElementById('fex-yearly').value) || 0;
+  const totalSpent = parseFloat(document.getElementById('fex-total-spent').value) || 0;
+  const currentSpent = parseFloat(document.getElementById('fex-current-spent').value) || 0;
+  const spentMonths = parseInt(document.getElementById('fex-months').value) || 1;
+  const source = document.getElementById('fex-source').value || '';
+  if (!name) return alert('请输入款项名称');
+  if (monthlyLimit === 0 && yearlyLimit === 0) return alert('请输入每月或每年限额');
+
+  const finalTotal = totalSpent + currentSpent;
+  const finalMonthly = monthlyLimit > 0 ? monthlyLimit : (yearlyLimit / 12);
+  const finalYearly = yearlyLimit > 0 ? yearlyLimit : (monthlyLimit * 12);
+
+  DATA.finance.fixedExpenses.push({
+    id: Date.now() + Math.random(),
+    name,
+    monthlyLimit: finalMonthly,
+    yearlyLimit: finalYearly,
+    totalSpent: finalTotal,
+    currentSpent: 0,
+    spentMonths,
+    source
+  });
+
+  ['fex-name','fex-monthly','fex-yearly','fex-total-spent','fex-current-spent','fex-months'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const srcEl = document.getElementById('fex-source');
+  if (srcEl) srcEl.value = '';
+  save(); renderFixedExpenses(); renderGapSurplus();
+}
+
+function deleteFixedExpense(index) {
+  DATA.finance.fixedExpenses.splice(index, 1);
+  save(); renderFixedExpenses(); renderGapSurplus();
+}
+
+function openEditFixedExpense(index) {
+  editingFixedExpenseIndex = index;
+  const item = DATA.finance.fixedExpenses[index];
+  let sourceOpts = '<option value="">来源</option>';
+  DATA.finance.accounts.forEach(a => {
+    sourceOpts += `<option value="${a.id}" ${item.source===a.id?'selected':''}>${a.name}</option>`;
+  });
+  sourceOpts += `<option value="fixed-income" ${item.source==='fixed-income'?'selected':''}>固定收入</option>`;
+
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="inp" id="edit-fex-name" placeholder="款项名称" value="${item.name}">
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="edit-fex-monthly" placeholder="每月限额" type="number" value="${item.monthlyLimit || ''}" oninput="syncEditYearly()" style="flex:1">
+        <input class="inp" id="edit-fex-yearly" placeholder="每年限额" type="number" value="${item.yearlyLimit || ''}" oninput="syncEditMonthly()" style="flex:1">
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="edit-fex-total" placeholder="累计已花销" type="number" value="${item.totalSpent || ''}" style="flex:1">
+        <input class="inp" id="edit-fex-current" placeholder="本次花销（保存后累加）" type="number" value="" style="flex:1">
+        <input class="inp" id="edit-fex-months" placeholder="花销月数" type="number" value="${item.spentMonths || 1}" style="width:80px">
+      </div>
+      <select class="select-inp" id="edit-fex-source">${sourceOpts}</select>
+      <button class="btn" onclick="saveFixedExpenseEdit()">保存修改</button>
+    </div>
+  `;
+  openModal('编辑固定支出', html);
+}
+
+function syncEditYearly() {
+  const m = parseFloat(document.getElementById('edit-fex-monthly').value);
+  if (!isNaN(m)) document.getElementById('edit-fex-yearly').value = (m * 12).toFixed(2);
+}
+function syncEditMonthly() {
+  const y = parseFloat(document.getElementById('edit-fex-yearly').value);
+  if (!isNaN(y)) document.getElementById('edit-fex-monthly').value = (y / 12).toFixed(2);
+}
+
+function saveFixedExpenseEdit() {
+  if (editingFixedExpenseIndex === null) return;
+  const name = document.getElementById('edit-fex-name').value.trim();
+  if (!name) return;
+  const monthlyLimit = parseFloat(document.getElementById('edit-fex-monthly').value) || 0;
+  const yearlyLimit = parseFloat(document.getElementById('edit-fex-yearly').value) || 0;
+  const totalSpent = parseFloat(document.getElementById('edit-fex-total').value) || 0;
+  const currentSpent = parseFloat(document.getElementById('edit-fex-current').value) || 0;
+  const spentMonths = parseInt(document.getElementById('edit-fex-months').value) || 1;
+
+  DATA.finance.fixedExpenses[editingFixedExpenseIndex] = {
+    ...DATA.finance.fixedExpenses[editingFixedExpenseIndex],
+    name,
+    monthlyLimit: monthlyLimit > 0 ? monthlyLimit : (yearlyLimit / 12),
+    yearlyLimit: yearlyLimit > 0 ? yearlyLimit : (monthlyLimit * 12),
+    totalSpent: totalSpent + currentSpent,
+    currentSpent: 0,
+    spentMonths,
+    source: document.getElementById('edit-fex-source').value || ''
+  };
+  editingFixedExpenseIndex = null;
+  closeModal();
+  save(); renderFixedExpenses(); renderGapSurplus();
+}
+
+function renderFixedIncome() {
+  const el = document.getElementById('fixed-income-table');
+  el.innerHTML = DATA.finance.fixedIncome.map((item, i) => {
+    const yearlyTotal = item.period === 'monthly' ? item.amount * 12 : item.amount;
+    return `<tr>
+      <td>${item.name}</td>
+      <td>¥${parseFloat(item.amount).toFixed(2)}</td>
+      <td>${item.period==='monthly'?'每月':'一次性'}</td>
+      <td>¥${yearlyTotal.toFixed(2)}</td>
+      <td>${item.destination || '-'}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:flex-end">
+          <div class="edit-btn" onclick="openEditFixedIncome(${i})">编辑</div>
+          <div class="delete-btn" onclick="deleteFixedIncome(${i})">删除</div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="color:var(--text3);font-size:13px">暂无固定收入</td></tr>';
+}
+
+function addFixedIncome() {
+  const name = document.getElementById('fin-name').value.trim();
+  const amount = parseFloat(document.getElementById('fin-amount').value) || 0;
+  const period = document.getElementById('fin-period').value || 'monthly';
+  const destination = document.getElementById('fin-dest').value.trim();
+  if (!name) return alert('请输入收入名称');
+  DATA.finance.fixedIncome.push({id: Date.now() + Math.random(), name, amount, period, destination});
+  document.getElementById('fin-name').value = '';
+  document.getElementById('fin-amount').value = '';
+  document.getElementById('fin-period').value = 'monthly';
+  document.getElementById('fin-dest').value = '';
+  save(); renderFixedIncome(); renderGapSurplus();
+}
+
+function deleteFixedIncome(index) {
+  DATA.finance.fixedIncome.splice(index, 1);
+  save(); renderFixedIncome(); renderGapSurplus();
+}
+
+function openEditFixedIncome(index) {
+  editingFixedIncomeIndex = index;
+  const item = DATA.finance.fixedIncome[index];
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="inp" id="edit-fin-name" placeholder="名称" value="${item.name}">
+      <input class="inp" id="edit-fin-amount" placeholder="金额" type="number" value="${item.amount}">
+      <select class="select-inp" id="edit-fin-period">
+        <option value="monthly" ${item.period==='monthly'?'selected':''}>每月</option>
+        <option value="once" ${item.period==='once'?'selected':''}>一次性</option>
+      </select>
+      <input class="inp" id="edit-fin-dest" placeholder="去向" value="${item.destination || ''}">
+      <button class="btn" onclick="saveFixedIncomeEdit()">保存修改</button>
+    </div>
+  `;
+  openModal('编辑固定收入', html);
+}
+
+function saveFixedIncomeEdit() {
+  if (editingFixedIncomeIndex === null) return;
+  const name = document.getElementById('edit-fin-name').value.trim();
+  if (!name) return;
+  DATA.finance.fixedIncome[editingFixedIncomeIndex] = {
+    ...DATA.finance.fixedIncome[editingFixedIncomeIndex],
+    name,
+    amount: parseFloat(document.getElementById('edit-fin-amount').value) || 0,
+    period: document.getElementById('edit-fin-period').value || 'monthly',
+    destination: document.getElementById('edit-fin-dest').value.trim()
+  };
+  editingFixedIncomeIndex = null;
+  closeModal();
+  save(); renderFixedIncome(); renderGapSurplus();
+}
+
+function renderGapSurplus() {
+  // 现有资金总额
+  const totalFunds = DATA.finance.accounts.reduce((sum, acc) => {
+    const fundTotal = DATA.finance.fundsTable
+      .filter(f => f.source === acc.id)
+      .reduce((s, f) => s + (parseFloat(f.amount)||0), 0);
+    return sum + fundTotal + (parseFloat(acc.current)||0);
+  }, 0);
+
+  // 固定支出总额（按年，只算 unified 列表的 yearlyLimit）
+  const totalFixedExpense = DATA.finance.fixedExpenses.reduce((s, item) => {
+    return s + (parseFloat(item.yearlyLimit) || 0);
+  }, 0);
+
+  // 固定收入总额（按年）
+  const totalFixedIncome = DATA.finance.fixedIncome.reduce((s, item) => {
+    return s + (item.period === 'monthly' ? (parseFloat(item.amount)||0) * 12 : (parseFloat(item.amount)||0));
+  }, 0);
+
+  // 资金缺口/溢出
+  const result = totalFunds + totalFixedIncome - totalFixedExpense;
+
+  if (result >= 0) {
+    document.getElementById('fund-surplus').textContent = result.toFixed(2);
+    document.getElementById('fund-gap').textContent = '0.00';
+  } else {
+    document.getElementById('fund-surplus').textContent = '0.00';
+    document.getElementById('fund-gap').textContent = Math.abs(result).toFixed(2);
+  }
+}
+
+// ===================== TIME =====================
+function renderTime() {
+  renderSop();
+  renderVexp();
+  renderVinc();
+  renderPractice();
+  renderTimePL();
+}
+
+// ---- SOP ----
+function hmToMin(h, m) { return (parseInt(h)||0)*60 + (parseInt(m)||0); }
+function minToHm(min) {
+  const m = Math.abs(min);
+  const h = Math.floor(m/60);
+  const rm = m % 60;
+  const prefix = min < 0 ? '-' : '';
+  if (h > 0 && rm > 0) return prefix + h + '小时' + rm + '分';
+  if (h > 0) return prefix + h + '小时';
+  return prefix + rm + '分';
+}
+function minToHmShort(min) {
+  const m = Math.abs(min);
+  const h = Math.floor(m/60);
+  const rm = m % 60;
+  return (min < 0 ? '-' : '') + (h > 0 ? h + 'h' : '') + (rm > 0 ? rm + 'm' : (h===0 ? '0m' : ''));
+}
+
+function renderSop() {
+  const el = document.getElementById('sop-table');
+  let dailyTotal = 0, weeklyTotal = 0;
+  let html = '';
+  DATA.time.sop.forEach((item, i) => {
+    dailyTotal += item.dailyMin;
+    weeklyTotal += item.weeklyMin;
+    html += `<tr>
+      <td>${item.name}</td>
+      <td>${minToHm(item.dailyMin)} <span style="color:var(--text3);font-size:11px">(${item.dailyMin}分)</span></td>
+      <td>${minToHm(item.weeklyMin)} <span style="color:var(--text3);font-size:11px">(${item.weeklyMin}分)</span></td>
+      <td style="font-size:12px;color:var(--text3)">${item.dailyMin*7 === item.weeklyMin ? '日×7' : '周÷7'}</td>
+      <td><div class="delete-btn" onclick="deleteSop(${i})">删除</div></td>
+    </tr>`;
+  });
+  el.innerHTML = html || '<tr><td colspan="5" style="color:var(--text3);font-size:13px">暂无SOP项目</td></tr>';
+  document.getElementById('sop-daily-total').textContent = minToHm(dailyTotal);
+  document.getElementById('sop-weekly-total').textContent = minToHm(weeklyTotal);
+  const dailyRemain = 1440 - dailyTotal;
+  const weeklyRemain = 10080 - weeklyTotal;
+  const drEl = document.getElementById('sop-daily-remain');
+  const wrEl = document.getElementById('sop-weekly-remain');
+  drEl.textContent = minToHm(dailyRemain);
+  wrEl.textContent = minToHm(weeklyRemain);
+  drEl.style.color = dailyRemain >= 0 ? 'var(--green)' : 'var(--red)';
+  wrEl.style.color = weeklyRemain >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+function addSopItem() {
+  const name = document.getElementById('sop-name').value.trim();
+  const dailyH = document.getElementById('sop-daily-h').value;
+  const dailyM = document.getElementById('sop-daily-m').value;
+  const weeklyH = document.getElementById('sop-weekly-h').value;
+  const weeklyM = document.getElementById('sop-weekly-m').value;
+  if (!name) return alert('请输入项目名称');
+  let dailyMin = 0, weeklyMin = 0;
+  const dVal = hmToMin(dailyH, dailyM);
+  const wVal = hmToMin(weeklyH, weeklyM);
+  if (dVal > 0 && wVal > 0) {
+    dailyMin = dVal; weeklyMin = wVal;
+  } else if (dVal > 0) {
+    dailyMin = dVal; weeklyMin = dVal * 7;
+  } else if (wVal > 0) {
+    weeklyMin = wVal; dailyMin = Math.round(wVal / 7);
+  } else {
+    return alert('请填入每日或每周的时间额度');
+  }
+  DATA.time.sop.push({id: Date.now()+Math.random(), name, dailyMin, weeklyMin});
+  document.getElementById('sop-name').value = '';
+  document.getElementById('sop-daily-h').value = '';
+  document.getElementById('sop-daily-m').value = '';
+  document.getElementById('sop-weekly-h').value = '';
+  document.getElementById('sop-weekly-m').value = '';
+  save(); renderSop(); renderTimePL(); renderPractice();
+}
+function deleteSop(i) { DATA.time.sop.splice(i,1); save(); renderSop(); renderTimePL(); renderPractice(); }
+
+// ---- Vision Expense ----
+function renderVexp() {
+  const el = document.getElementById('vexp-table');
+  let total = 0;
+  let html = '';
+  DATA.time.visionExpense.forEach((item, i) => {
+    total += item.timeMin;
+    let badge = '';
+    if (item.source === 'saved') badge = '<span class="time-badge time-badge-saved">节省</span>';
+    else if (item.source === 'free') badge = '<span class="time-badge time-badge-free">自由</span>';
+    else if (item.source === 'squeeze') badge = '<span class="time-badge time-badge-squeeze">挤占</span>';
+    const pct = 1440 > 0 ? Math.round((item.timeMin / 1440) * 100) : 0;
+    html += `<tr>
+      <td>${item.name}</td>
+      <td>${minToHm(item.timeMin)} <span style="color:var(--text3);font-size:11px">(${item.timeMin}分)</span></td>
+      <td>${minToHm(item.spentMin || 0)} <span style="color:var(--text3);font-size:11px">(${(item.spentMin || 0)}分)</span></td>
+      <td>${pct}%</td>
+      <td>${badge}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:flex-end">
+          <div class="edit-btn" onclick="openEditVexp(${i})">编辑</div>
+          <div class="delete-btn" onclick="deleteVexp(${i})">删除</div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  el.innerHTML = html || '<tr><td colspan="6" style="color:var(--text3);font-size:13px">暂无固定支出</td></tr>';
+}
+
+function addVexp() {
+  const name = document.getElementById('vexp-name').value.trim();
+  const h = document.getElementById('vexp-h').value;
+  const m = document.getElementById('vexp-m').value;
+  const source = document.getElementById('vexp-source').value;
+  const timeMin = hmToMin(h, m);
+  if (!name || timeMin <= 0) return alert('请填写项目名称和时间');
+  const item = {id: Date.now()+Math.random(), name, timeMin, spentMin: 0, source};
+  DATA.time.visionExpense.push(item);
+  // 同步到实践版
+  syncPracticeFromVexp(item);
+  document.getElementById('vexp-name').value = '';
+  document.getElementById('vexp-h').value = '';
+  document.getElementById('vexp-m').value = '';
+  save(); renderVexp(); renderTimePL(); renderPractice();
+}
+function deleteVexp(i) {
+  const item = DATA.time.visionExpense[i];
+  // 删除关联的实践版项目
+  DATA.time.practice = DATA.time.practice.filter(p => p.linkedVisionId !== item.id);
+  DATA.time.visionExpense.splice(i,1);
+  save(); renderVexp(); renderTimePL(); renderPractice();
+}
+let editingVexpIndex = null;
+function openEditVexp(i) {
+  editingVexpIndex = i;
+  const item = DATA.time.visionExpense[i];
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="inp" id="edit-vexp-name" placeholder="项目名" value="${item.name}">
+      <div class="time-hm-wrap">
+        <input class="inp" id="edit-vexp-h" placeholder="时" type="number" value="${Math.floor(item.timeMin/60)}">
+        <span>:</span>
+        <input class="inp" id="edit-vexp-m" placeholder="分" type="number" value="${item.timeMin%60}">
+      </div>
+      <select class="select-inp" id="edit-vexp-source">
+        <option value="saved" ${item.source==='saved'?'selected':''}>节省出来的（绿）</option>
+        <option value="free" ${item.source==='free'?'selected':''}>自由支配（蓝）</option>
+        <option value="squeeze" ${item.source==='squeeze'?'selected':''}>挤占SOP（红）</option>
+      </select>
+      <button class="btn" onclick="saveVexpEdit()">保存</button>
+    </div>
+  `;
+  openModal('编辑固定支出', html);
+}
+function saveVexpEdit() {
+  if (editingVexpIndex === null) return;
+  const name = document.getElementById('edit-vexp-name').value.trim();
+  const timeMin = hmToMin(document.getElementById('edit-vexp-h').value, document.getElementById('edit-vexp-m').value);
+  const source = document.getElementById('edit-vexp-source').value;
+  if (!name || timeMin <= 0) return;
+  const oldId = DATA.time.visionExpense[editingVexpIndex].id;
+  DATA.time.visionExpense[editingVexpIndex] = { ...DATA.time.visionExpense[editingVexpIndex], name, timeMin, source };
+  // 同步更新实践版关联项目
+  const prac = DATA.time.practice.find(p => p.linkedVisionId === oldId);
+  if (prac) { prac.name = name; }
+  editingVexpIndex = null;
+  closeModal(); save(); renderVexp(); renderTimePL(); renderPractice();
+}
+
+// ---- Vision Income ----
+function renderVinc() {
+  const el = document.getElementById('vinc-table');
+  let html = '';
+  DATA.time.visionIncome.forEach((item, i) => {
+    const stars = '★'.repeat(item.value || 1) + '☆'.repeat(5 - (item.value || 1));
+    html += `<tr>
+      <td>${item.name}</td>
+      <td>${minToHm(item.dailyMin)} <span style="color:var(--text3);font-size:11px">(${item.dailyMin}分)</span></td>
+      <td>${minToHm(item.monthlyMin)} <span style="color:var(--text3);font-size:11px">(${item.monthlyMin}分)</span></td>
+      <td>${item.destination || '-'}</td>
+      <td style="color:#f59e0b;font-size:14px;letter-spacing:1px">${stars}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:flex-end">
+          <div class="edit-btn" onclick="openEditVinc(${i})">编辑</div>
+          <div class="delete-btn" onclick="deleteVinc(${i})">删除</div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  el.innerHTML = html || '<tr><td colspan="6" style="color:var(--text3);font-size:13px">暂无固定收入</td></tr>';
+}
+
+function addVinc() {
+  const name = document.getElementById('vinc-name').value.trim();
+  const dailyH = document.getElementById('vinc-daily-h').value;
+  const dailyM = document.getElementById('vinc-daily-m').value;
+  const monthlyH = document.getElementById('vinc-monthly-h').value;
+  const monthlyM = document.getElementById('vinc-monthly-m').value;
+  const dest = document.getElementById('vinc-dest').value.trim();
+  if (!name) return alert('请输入项目名称');
+  let dailyMin = 0, monthlyMin = 0;
+  const dVal = hmToMin(dailyH, dailyM);
+  const mVal = hmToMin(monthlyH, monthlyM);
+  if (dVal > 0 && mVal > 0) {
+    dailyMin = dVal; monthlyMin = mVal;
+  } else if (dVal > 0) {
+    dailyMin = dVal; monthlyMin = dVal * 30;
+  } else if (mVal > 0) {
+    monthlyMin = mVal; dailyMin = Math.round(mVal / 30);
+  } else {
+    return alert('请填入每日或每月的时间额度');
+  }
+  DATA.time.visionIncome.push({id: Date.now()+Math.random(), name, dailyMin, monthlyMin, destination: dest, value: 3});
+  document.getElementById('vinc-name').value = '';
+  document.getElementById('vinc-daily-h').value = '';
+  document.getElementById('vinc-daily-m').value = '';
+  document.getElementById('vinc-monthly-h').value = '';
+  document.getElementById('vinc-monthly-m').value = '';
+  document.getElementById('vinc-dest').value = '';
+  save(); renderVinc(); renderTimePL();
+}
+function deleteVinc(i) { DATA.time.visionIncome.splice(i,1); save(); renderVinc(); renderTimePL(); }
+let editingVincIndex = null;
+function openEditVinc(i) {
+  editingVincIndex = i;
+  const item = DATA.time.visionIncome[i];
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="inp" id="edit-vinc-name" placeholder="项目名" value="${item.name}">
+      <div style="display:flex;gap:8px">
+        <div class="time-hm-wrap" style="flex:1">
+          <input class="inp" id="edit-vinc-dh" placeholder="时" type="number" value="${Math.floor(item.dailyMin/60)}">
+          <span>:</span>
+          <input class="inp" id="edit-vinc-dm" placeholder="分" type="number" value="${item.dailyMin%60}">
+        </div>
+        <div class="time-hm-wrap" style="flex:1">
+          <input class="inp" id="edit-vinc-mh" placeholder="时" type="number" value="${Math.floor(item.monthlyMin/60)}">
+          <span>:</span>
+          <input class="inp" id="edit-vinc-mm" placeholder="分" type="number" value="${item.monthlyMin%60}">
+        </div>
+      </div>
+      <input class="inp" id="edit-vinc-dest" placeholder="去处" value="${item.destination || ''}">
+      <div style="font-size:13px;color:var(--text2)">价值度（点击星星）</div>
+      <div class="value-stars" id="edit-vinc-stars"></div>
+      <button class="btn" onclick="saveVincEdit()">保存</button>
+    </div>
+  `;
+  openModal('编辑固定收入', html);
+  renderValueStars(item.value || 3, 'edit-vinc-stars');
+}
+function renderValueStars(current, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  let html = '';
+  for (let i=1; i<=5; i++) {
+    html += `<span class="value-star ${i<=current?'active':''}" onclick="setValueStar(${i},'${containerId}')">★</span>`;
+  }
+  el.innerHTML = html;
+  el.dataset.value = current;
+}
+function setValueStar(val, containerId) {
+  renderValueStars(val, containerId);
+}
+function saveVincEdit() {
+  if (editingVincIndex === null) return;
+  const name = document.getElementById('edit-vinc-name').value.trim();
+  const dailyMin = hmToMin(document.getElementById('edit-vinc-dh').value, document.getElementById('edit-vinc-dm').value);
+  const monthlyMin = hmToMin(document.getElementById('edit-vinc-mh').value, document.getElementById('edit-vinc-mm').value);
+  const dest = document.getElementById('edit-vinc-dest').value.trim();
+  const starsEl = document.getElementById('edit-vinc-stars');
+  const value = starsEl ? (parseInt(starsEl.dataset.value) || 3) : 3;
+  if (!name) return;
+  let finalDaily = dailyMin, finalMonthly = monthlyMin;
+  if (dailyMin > 0 && monthlyMin <= 0) finalMonthly = dailyMin * 30;
+  if (monthlyMin > 0 && dailyMin <= 0) finalDaily = Math.round(monthlyMin / 30);
+  DATA.time.visionIncome[editingVincIndex] = {
+    ...DATA.time.visionIncome[editingVincIndex],
+    name, dailyMin: finalDaily, monthlyMin: finalMonthly, destination: dest, value
+  };
+  editingVincIndex = null;
+  closeModal(); save(); renderVinc(); renderTimePL();
+}
+
+// ---- Time P&L ----
+function renderTimePL() {
+  const sopDailyTotal = DATA.time.sop.reduce((s, i) => s + i.dailyMin, 0);
+  const sopWeeklyTotal = DATA.time.sop.reduce((s, i) => s + i.weeklyMin, 0);
+  const dailyRemain = 1440 - sopDailyTotal;
+  const weeklyRemain = 10080 - sopWeeklyTotal;
+  const vexpDaily = DATA.time.visionExpense.reduce((s, i) => s + i.timeMin, 0);
+  const vexpWeekly = vexpDaily * 7;
+  const vincDaily = DATA.time.visionIncome.reduce((s, i) => s + i.dailyMin, 0);
+  const vincWeekly = vincDaily * 7;
+  const dailyPL = dailyRemain + vincDaily - vexpDaily;
+  const weeklyPL = weeklyRemain + vincWeekly - vexpWeekly;
+  const dEl = document.getElementById('pl-daily');
+  const wEl = document.getElementById('pl-weekly');
+  dEl.textContent = (dailyPL >= 0 ? '+' : '') + minToHm(dailyPL);
+  wEl.textContent = (weeklyPL >= 0 ? '+' : '') + minToHm(weeklyPL);
+  dEl.className = 'time-stat-value ' + (dailyPL > 0 ? 'time-pl-positive' : (dailyPL < 0 ? 'time-pl-negative' : 'time-pl-zero'));
+  wEl.className = 'time-stat-value ' + (weeklyPL > 0 ? 'time-pl-positive' : (weeklyPL < 0 ? 'time-pl-negative' : 'time-pl-zero'));
+  document.getElementById('pl-daily-hm').textContent = '(' + dailyPL + '分)';
+  document.getElementById('pl-weekly-hm').textContent = '(' + weeklyPL + '分)';
+}
+
+// ---- Practice ----
+function syncPracticeFromVexp(vexpItem) {
+  const existing = DATA.time.practice.find(p => p.linkedVisionId === vexpItem.id);
+  if (!existing) {
+    DATA.time.practice.push({
+      id: Date.now()+Math.random(),
+      name: vexpItem.name,
+      visionMin: vexpItem.timeMin,
+      cumulativeSpent: 0,
+      currentInput: 0,
+      linkedVisionId: vexpItem.id
+    });
+  }
+}
+
+function renderPractice() {
+  // 先同步所有愿景版项目
+  DATA.time.visionExpense.forEach(v => {
+    const existing = DATA.time.practice.find(p => p.linkedVisionId === v.id);
+    if (existing) {
+      existing.name = v.name;
+      existing.visionMin = v.timeMin;
+    } else {
+      DATA.time.practice.push({
+        id: Date.now()+Math.random(),
+        name: v.name,
+        visionMin: v.timeMin,
+        cumulativeSpent: 0,
+        currentInput: 0,
+        linkedVisionId: v.id
+      });
+    }
+  });
+  const el = document.getElementById('practice-table');
+  let html = '';
+  let totalDeviation = 0;
+  let count = 0;
+  DATA.time.practice.forEach((item, i) => {
+    const deviation = item.visionMin - item.cumulativeSpent;
+    totalDeviation += Math.abs(deviation);
+    count++;
+    const devColor = deviation > 0 ? 'var(--green)' : (deviation < 0 ? 'var(--red)' : 'var(--text2)');
+    const devSign = deviation > 0 ? '+' : '';
+    const syncHint = item.linkedVisionId ? '<span class="practice-sync-hint">↔ 同步</span>' : '';
+    html += `<tr>
+      <td>${item.name}${syncHint}</td>
+      <td>${minToHm(item.visionMin)} <span style="color:var(--text3);font-size:11px">(${item.visionMin}分)</span></td>
+      <td><input class="inp inp-sm" style="width:90px;text-align:center" value="${minToHm(item.cumulativeSpent)}" readonly></td>
+      <td><input class="inp inp-sm" id="prac-input-${i}" style="width:70px;text-align:center" type="number" min="0" placeholder="填入(分)"></td>
+      <td><button class="btn btn-sm" onclick="confirmPracticeInput(${i})">确认</button></td>
+      <td style="color:${devColor};font-weight:600">${devSign}${minToHm(deviation)} <span style="color:var(--text3);font-size:11px">(${deviation}分)</span></td>
+      <td><div class="delete-btn" onclick="deletePractice(${i})">删除</div></td>
+    </tr>`;
+  });
+  el.innerHTML = html || '<tr><td colspan="7" style="color:var(--text3);font-size:13px">暂无实践记录</td></tr>';
+  renderPracticeStars(totalDeviation, count);
+}
+
+function confirmPracticeInput(i) {
+  const inputEl = document.getElementById('prac-input-' + i);
+  const val = parseFloat(inputEl.value) || 0;
+  if (val < 0) return;
+  DATA.time.practice[i].cumulativeSpent += val;
+  inputEl.value = '';
+  save(); renderPractice(); renderVexp();
+}
+
+function addPracticeItem() {
+  const name = document.getElementById('prac-name').value.trim();
+  const timeMin = hmToMin(document.getElementById('prac-h').value, document.getElementById('prac-m').value);
+  if (!name || timeMin <= 0) return alert('请填写项目名称和时间');
+  DATA.time.practice.push({
+    id: Date.now()+Math.random(), name, visionMin: timeMin,
+    cumulativeSpent: 0, currentInput: 0, linkedVisionId: null
+  });
+  document.getElementById('prac-name').value = '';
+  document.getElementById('prac-h').value = '';
+  document.getElementById('prac-m').value = '';
+  save(); renderPractice();
+}
+function deletePractice(i) {
+  DATA.time.practice.splice(i, 1);
+  save(); renderPractice();
+}
+
+function renderPracticeStars(totalDeviation, count) {
+  const starsEl = document.getElementById('practice-stars');
+  const descEl = document.getElementById('practice-star-desc');
+  if (count === 0) {
+    starsEl.innerHTML = '';
+    descEl.textContent = '暂无数据';
+    return;
+  }
+  const avgDev = totalDeviation / count;
+  // 偏离越小星越多：0-10分=5星, 10-30=4星, 30-60=3星, 60-120=2星, 120-240=1星, >240=0星
+  let stars = 0;
+  if (avgDev <= 10) stars = 5;
+  else if (avgDev <= 30) stars = 4;
+  else if (avgDev <= 60) stars = 3;
+  else if (avgDev <= 120) stars = 2;
+  else if (avgDev <= 240) stars = 1;
+  else stars = 0;
+  let html = '';
+  for (let i=0; i<5; i++) {
+    html += `<span class="time-star ${i < stars ? 'active' : ''}">★</span>`;
+  }
+  starsEl.innerHTML = html;
+  const labels = ['完美同步', '非常接近', '基本吻合', '略有偏差', '偏差较大', '严重偏离'];
+  descEl.textContent = `平均偏离 ${minToHm(Math.round(avgDev))} (${Math.round(avgDev)}分) · ${labels[5-stars]}`;
+}
+
+// ===================== INIT =====================
+function renderAll() {
+  renderHealthCalendar(); renderStats(); renderExercises(); renderSleep(); renderSupplements(); renderTherapies(); updateAchievements();
+  renderStudyCalendar(); renderKanban(); renderArticles(); renderSkills();
+  renderHobby(); renderHobbyEvents();
+  renderTransactions(); renderWishlist(); renderFunds(); renderFinanceSummary();
+  renderFixedExpenses(); renderFixedIncome(); renderGapSurplus();
+  renderTime();
+}
+
+// Set default date for transaction
+const now = new Date();
+document.getElementById('tx-date').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+load();
+renderAll();
+</script>
+</body>
+</html>
