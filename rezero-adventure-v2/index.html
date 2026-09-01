@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a0f2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>命运之门 · 异世界冒险</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192x192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0d0618;
+            --bg-card: rgba(26, 15, 46, 0.85);
+            --primary-gold: #d4af37;
+            --primary-gold-light: #f0d878;
+            --dream-purple: #9b59b6;
+            --wisdom-blue: #3498db;
+            --life-green: #2ecc71;
+            --danger-red: #e74c3c;
+            --text-primary: #f0e6d3;
+            --text-secondary: #b8a9c9;
+            --border-glow: rgba(212, 175, 55, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 星空背景 */
+        .stars-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* 魔法粒子 */
+        .magic-particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            border-radius: 50%;
+            animation: particleFloat 1.5s ease-out forwards;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+        /* 页面容器 */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        /* 顶部标题 */
+        .app-header {
+            text-align: center;
+            padding: 24px 16px 16px;
+            background: linear-gradient(180deg, rgba(13,6,24,0.9) 0%, transparent 100%);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .app-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            color: var(--primary-gold);
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .app-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 4px;
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background: rgba(13, 6, 24, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-glow);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            font-family: inherit;
+        }
+
+        .nav-item.active {
+            color: var(--primary-gold);
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 2px;
+        }
+
+        .nav-item span {
+            font-size: 0.65rem;
+        }
+
+        /* 页面切换 */
+        .page {
+            display: none;
+            padding: 0 16px 24px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 任务类型标签 */
+        .quest-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .quest-tab {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 16px;
+            border: 1px solid var(--border-glow);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quest-tab.active {
+            border-color: var(--primary-gold);
+            color: var(--primary-gold);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .quest-tab .tab-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--danger-red);
+            color: white;
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+        }
+
+        /* 任务卡片 */
+        .quest-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quest-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gold);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .quest-card:hover::before,
+        .quest-card:active::before {
+            opacity: 1;
+        }
+
+        .quest-card.completed {
+            opacity: 0.6;
+            border-color: rgba(46, 204, 113, 0.3);
+        }
+
+        .quest-card.completed::after {
+            content: '✦ 已完成';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 0.7rem;
+            color: var(--life-green);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+
+        .quest-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+
+        .quest-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+            padding-right: 8px;
+        }
+
+        .quest-type-icon {
+            font-size: 1.2rem;
+        }
+
+        .quest-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .quest-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quest-rewards {
+            display: flex;
+            gap: 6px;
+        }
+
+        .reward-tag {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .reward-dream { background: rgba(155, 89, 182, 0.2); color: #c084fc; }
+        .reward-wisdom { background: rgba(52, 152, 219, 0.2); color: #6bb6ff; }
+        .reward-life { background: rgba(46, 204, 113, 0.2); color: #6ee7b7; }
+
+        /* 添加按钮 */
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-gold), #b8941f);
+            border: none;
+            color: var(--bg-deep);
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, #1a0f2e 0%, #0d0618 100%);
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            border-radius: 24px 24px 0 0;
+            border: 1px solid var(--border-glow);
+            border-bottom: none;
+            padding: 24px;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--primary-gold);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-select {
+            cursor: pointer;
+        }
+
+        .form-select option {
+            background: #1a0f2e;
+            color: var(--text-primary);
+        }
+
+        /* 奖励选择器 */
+        .reward-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .reward-option {
+            padding: 8px 14px;
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+        }
+
+        .reward-option.selected {
+            border-color: var(--primary-gold);
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--primary-gold);
+        }
+
+        .reward-option[data-type="dream"].selected {
+            border-color: var(--dream-purple);
+            background: rgba(155, 89, 182, 0.1);
+            color: #c084fc;
+        }
+
+        .reward-option[data-type="wisdom"].selected {
+            border-color: var(--wisdom-blue);
+            background: rgba(52, 152, 219, 0.1);
+            color: #6bb6ff;
+        }
+
+        .reward-option[data-type="life"].selected {
+            border-color: var(--life-green);
+            background: rgba(46, 204, 113, 0.1);
+            color: #6ee7b7;
+        }
+
+        /* 按钮 */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-gold), #b8941f);
+            color: var(--bg-deep);
+            font-weight: 600;
+        }
+
+        .btn-danger {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger-red);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-glow);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            margin-top: 0;
+        }
+
+        /* 任务详情页 */
+        .quest-detail-header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-glow);
+            margin-bottom: 20px;
+        }
+
+        .quest-detail-type {
+            font-size: 0.75rem;
+            color: var(--primary-gold);
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .quest-detail-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .quest-detail-meta {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .quest-detail-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: var(--primary-gold);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-content {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+        }
+
+        /* 日记区域 */
+        .diary-entry {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--primary-gold);
+        }
+
+        .diary-date {
+            font-size: 0.7rem;
+            color: var(--primary-gold);
+            margin-bottom: 6px;
+        }
+
+        .diary-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .diary-input-area {
+            margin-top: 12px;
+        }
+
+        /* 角色页面 */
+        .character-header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+
+        .character-avatar {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 16px;
+            position: relative;
+        }
+
+        .character-avatar svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.3));
+        }
+
+        .character-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            color: var(--primary-gold);
+            margin-bottom: 4px;
+        }
+
+        .character-title {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+        }
+
+        /* 能量展示 */
+        .energy-section {
+            margin-bottom: 24px;
+        }
+
+        .energy-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .energy-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .energy-dream { background: rgba(155, 89, 182, 0.15); }
+        .energy-wisdom { background: rgba(52, 152, 219, 0.15); }
+        .energy-life { background: rgba(46, 204, 113, 0.15); }
+
+        .energy-info {
+            flex: 1;
+        }
+
+        .energy-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .energy-bar-bg {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .energy-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+
+        .energy-value {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* 成就展示 */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .achievement-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 14px 8px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .achievement-item.unlocked {
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+        }
+
+        .achievement-item.locked {
+            opacity: 0.4;
+        }
+
+        .achievement-icon {
+            font-size: 1.6rem;
+            margin-bottom: 6px;
+        }
+
+        .achievement-name {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        /* 自我介绍编辑 */
+        .bio-section {
+            margin-bottom: 24px;
+        }
+
+        .bio-text {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            min-height: 80px;
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: var(--primary-gold);
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-top: 8px;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 统计卡片 */
+        .stats-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            color: var(--primary-gold);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        /* 完成任务动画 */
+        .completion-celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            display: none;
+        }
+
+        .completion-celebration.active {
+            display: block;
+        }
+
+        .star-particle {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: starBurst 1.2s ease-out forwards;
+        }
+
+        @keyframes starBurst {
+            0% { transform: translate(0, 0) scale(0) rotate(0deg); opacity: 1; }
+            50% { transform: translate(var(--tx), var(--ty)) scale(1.2) rotate(180deg); opacity: 1; }
+            100% { transform: translate(var(--tx2), var(--ty2)) scale(0.5) rotate(360deg); opacity: 0; }
+        }
+
+        .level-up-text {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            color: var(--primary-gold);
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.8);
+            animation: levelUpFloat 2s ease-out forwards;
+            white-space: nowrap;
+        }
+
+        @keyframes levelUpFloat {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -80%) scale(1); }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-hint {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-glow);
+            border-radius: 2px;
+        }
+
+        /* 删除确认 */
+        .delete-confirm {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .delete-confirm p {
+            font-size: 0.85rem;
+            color: var(--danger-red);
+            margin-bottom: 12px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 380px) {
+            .quest-tabs {
+                gap: 6px;
+            }
+            .quest-tab {
+                min-width: 90px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            .achievements-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星空背景 -->
+    <div class="stars-bg" id="starsBg"></div>
+
+    <!-- 完成庆祝动画层 -->
+    <div class="completion-celebration" id="celebration"></div>
+
+    <div class="app-container">
+        <!-- 头部 -->
+        <header class="app-header">
+            <h1 class="app-title">命运之门</h1>
+            <p class="app-subtitle">异世界冒险日志</p>
+        </header>
+
+        <!-- 任务页面 -->
+        <div class="page active" id="page-quests">
+            <div class="quest-tabs">
+                <button class="quest-tab active" data-type="main" onclick="switchQuestType('main')">
+                    ⚔️ 主线任务
+                    <span class="tab-badge" id="badge-main" style="display:none">0</span>
+                </button>
+                <button class="quest-tab" data-type="side" onclick="switchQuestType('side')">
+                    🗡️ 支线任务
+                    <span class="tab-badge" id="badge-side" style="display:none">0</span>
+                </button>
+                <button class="quest-tab" data-type="sudden" onclick="switchQuestType('sudden')">
+                    ⚡ 突发任务
+                    <span class="tab-badge" id="badge-sudden" style="display:none">0</span>
+                </button>
+            </div>
+            <div id="questList"></div>
+        </div>
+
+        <!-- 角色页面 -->
+        <div class="page" id="page-character">
+            <div class="character-header">
+                <div class="character-avatar">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- 背景光环 -->
+                        <circle cx="100" cy="100" r="90" fill="none" stroke="#d4af37" stroke-width="0.5" opacity="0.3"/>
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="#d4af37" stroke-width="0.3" opacity="0.2"/>
+
+                        <!-- 身体 -->
+                        <ellipse cx="100" cy="170" rx="45" ry="25" fill="#2d1f3d"/>
+                        <path d="M70 170 Q100 185 130 170 L130 200 L70 200 Z" fill="#3d2f4d"/>
+
+                        <!-- 脖子 -->
+                        <rect x="92" y="125" width="16" height="20" fill="#f5d0c5"/>
+
+                        <!-- 脸 -->
+                        <ellipse cx="100" cy="95" rx="38" ry="42" fill="#f5d0c5"/>
+                        <ellipse cx="100" cy="98" rx="35" ry="38" fill="#f8ddd4"/>
+
+                        <!-- 腮红 -->
+                        <ellipse cx="75" cy="108" rx="6" ry="4" fill="#ffb6c1" opacity="0.4"/>
+                        <ellipse cx="125" cy="108" rx="6" ry="4" fill="#ffb6c1" opacity="0.4"/>
+
+                        <!-- 眼睛 -->
+                        <ellipse cx="82" cy="92" rx="10" ry="12" fill="white"/>
+                        <ellipse cx="118" cy="92" rx="10" ry="12" fill="white"/>
+                        <circle cx="84" cy="92" r="6" fill="#4a6741"/>
+                        <circle cx="120" cy="92" r="6" fill="#4a6741"/>
+                        <circle cx="85" cy="90" r="2.5" fill="white"/>
+                        <circle cx="121" cy="90" r="2.5" fill="white"/>
+
+                        <!-- 眼镜 -->
+                        <circle cx="82" cy="92" r="14" fill="none" stroke="#d4af37" stroke-width="2"/>
+                        <circle cx="118" cy="92" r="14" fill="none" stroke="#d4af37" stroke-width="2"/>
+                        <line x1="96" y1="92" x2="104" y2="92" stroke="#d4af37" stroke-width="2"/>
+                        <line x1="68" y1="92" x2="55" y2="88" stroke="#d4af37" stroke-width="1.5"/>
+                        <line x1="132" y1="92" x2="145" y2="88" stroke="#d4af37" stroke-width="1.5"/>
+
+                        <!-- 眼镜高光 -->
+                        <path d="M72 86 Q78 84 84 86" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
+                        <path d="M108 86 Q114 84 120 86" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
+
+                        <!-- 眉毛 -->
+                        <path d="M72 78 Q82 74 90 78" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M110 78 Q118 74 128 78" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round"/>
+
+                        <!-- 鼻子 -->
+                        <path d="M100 102 Q102 105 100 107" fill="none" stroke="#d4a574" stroke-width="1.5" stroke-linecap="round"/>
+
+                        <!-- 嘴巴（自信微笑） -->
+                        <path d="M88 118 Q100 126 112 118" fill="none" stroke="#c97b7b" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M86 117 Q100 128 114 117" fill="none" stroke="#e8a5a5" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+
+                        <!-- 头发（低饱和黄绿色/蓝绿色，短发微卷） -->
+                        <defs>
+                            <linearGradient id="hairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#8fbc8f"/>
+                                <stop offset="50%" style="stop-color:#7fb3a3"/>
+                                <stop offset="100%" style="stop-color:#6b9b8f"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- 后发 -->
+                        <path d="M55 85 Q45 100 50 120 Q55 135 70 140 Q80 145 90 142" fill="url(#hairGrad)"/>
+                        <path d="M145 85 Q155 100 150 120 Q145 135 130 140 Q120 145 110 142" fill="url(#hairGrad)"/>
+
+                        <!-- 顶部头发 -->
+                        <path d="M55 85 Q60 50 85 40 Q100 35 115 40 Q140 50 145 85 Q140 60 120 50 Q100 45 80 50 Q60 60 55 85" fill="url(#hairGrad)"/>
+
+                        <!-- 刘海（微卷感） -->
+                        <path d="M65 70 Q75 55 85 65 Q95 50 105 65 Q115 55 125 70 Q130 80 135 90" fill="none" stroke="url(#hairGrad)" stroke-width="12" stroke-linecap="round"/>
+                        <path d="M70 75 Q80 60 90 72 Q100 58 110 72 Q120 62 130 78" fill="none" stroke="#9fc9a8" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+
+                        <!-- 呆毛 -->
+                        <path d="M100 40 Q105 25 110 30 Q108 35 102 38" fill="url(#hairGrad)"/>
+
+                        <!-- 耳朵 -->
+                        <ellipse cx="58" cy="100" rx="5" ry="8" fill="#f5d0c5"/>
+                        <ellipse cx="142" cy="100" rx="5" ry="8" fill="#f5d0c5"/>
+
+                        <!-- 衣服领子 -->
+                        <path d="M75 150 Q100 165 125 150 L130 170 Q100 180 70 170 Z" fill="#4a3f5c"/>
+                        <path d="M85 155 Q100 160 115 155" fill="none" stroke="#d4af37" stroke-width="1"/>
+
+                        <!-- 魔法书 -->
+                        <rect x="125" y="155" width="22" height="18" rx="2" fill="#5d4e6f" stroke="#d4af37" stroke-width="0.5"/>
+                        <line x1="136" y1="155" x2="136" y2="173" stroke="#d4af37" stroke-width="0.5"/>
+                        <circle cx="131" cy="164" r="3" fill="#d4af37" opacity="0.6"/>
+                    </svg>
+                </div>
+                <h2 class="character-name" id="charName">冒险者</h2>
+                <p class="character-title">Lv.<span id="charLevel">1</span> 异世界转生者</p>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">总任务</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statCompleted">0</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statAchievements">0</div>
+                    <div class="stat-label">成就</div>
+                </div>
+            </div>
+
+            <div class="energy-section">
+                <div class="section-title">✦ 能量之源</div>
+                <div class="energy-card">
+                    <div class="energy-icon energy-dream">🔮</div>
+                    <div class="energy-info">
+                        <div class="energy-name" style="color: #c084fc">梦想之力</div>
+                        <div class="energy-bar-bg">
+                            <div class="energy-bar-fill" id="barDream" style="width: 0%; background: linear-gradient(90deg, #9b59b6, #c084fc)"></div>
+                        </div>
+                        <div class="energy-value"><span id="valDream">0</span> / <span id="maxDream">100</span></div>
+                    </div>
+                </div>
+                <div class="energy-card">
+                    <div class="energy-icon energy-wisdom">📖</div>
+                    <div class="energy-info">
+                        <div class="energy-name" style="color: #6bb6ff">智慧之力</div>
+                        <div class="energy-bar-bg">
+                            <div class="energy-bar-fill" id="barWisdom" style="width: 0%; background: linear-gradient(90deg, #3498db, #6bb6ff)"></div>
+                        </div>
+                        <div class="energy-value"><span id="valWisdom">0</span> / <span id="maxWisdom">100</span></div>
+                    </div>
+                </div>
+                <div class="energy-card">
+                    <div class="energy-icon energy-life">🌿</div>
+                    <div class="energy-info">
+                        <div class="energy-name" style="color: #6ee7b7">生命源力</div>
+                        <div class="energy-bar-bg">
+                            <div class="energy-bar-fill" id="barLife" style="width: 0%; background: linear-gradient(90deg, #2ecc71, #6ee7b7)"></div>
+                        </div>
+                        <div class="energy-value"><span id="valLife">0</span> / <span id="maxLife">100</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bio-section">
+                <div class="section-title">✦ 冒险者手记</div>
+                <div class="bio-text" id="bioText">在这里写下你的冒险者自我介绍...</div>
+                <button class="edit-btn" onclick="editBio()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    编辑手记
+                </button>
+            </div>
+
+            <div class="achievement-section">
+                <div class="section-title">✦ 成就图鉴</div>
+                <div class="achievements-grid" id="achievementsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加任务按钮 -->
+    <button class="fab" id="fabAdd" onclick="openAddModal()">+</button>
+
+    <!-- 底部导航 -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchPage('quests')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span>任务</span>
+        </button>
+        <button class="nav-item" onclick="switchPage('character')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span>角色</span>
+        </button>
+    </nav>
+
+    <!-- 添加/编辑任务模态框 -->
+    <div class="modal-overlay" id="modalQuest">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalQuestTitle">发布新任务</h3>
+                <button class="modal-close" onclick="closeModal('modalQuest')">✕</button>
+            </div>
+            <form id="questForm" onsubmit="saveQuest(event)">
+                <input type="hidden" id="questId">
+                <div class="form-group">
+                    <label class="form-label">任务类型</label>
+                    <select class="form-select" id="questType">
+                        <option value="main">⚔️ 主线任务</option>
+                        <option value="side">🗡️ 支线任务</option>
+                        <option value="sudden">⚡ 突发任务</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">任务名称</label>
+                    <input type="text" class="form-input" id="questName" placeholder="给任务起一个响亮的名字..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">任务描述</label>
+                    <textarea class="form-textarea" id="questDesc" placeholder="描述任务内容、步骤、需要击败的BOSS..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">任务奖励（可多选）</label>
+                    <div class="reward-selector">
+                        <button type="button" class="reward-option" data-type="dream" onclick="toggleReward(this)">
+                            🔮 梦想之力
+                        </button>
+                        <button type="button" class="reward-option" data-type="wisdom" onclick="toggleReward(this)">
+                            📖 智慧之力
+                        </button>
+                        <button type="button" class="reward-option" data-type="life" onclick="toggleReward(this)">
+                            🌿 生命源力
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">任务成就</label>
+                    <input type="text" class="form-input" id="questAchievement" placeholder="完成任务后获得的称号或成就...">
+                </div>
+                <button type="submit" class="btn btn-primary">✦ 确认发布</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 任务详情模态框 -->
+    <div class="modal-overlay" id="modalDetail">
+        <div class="modal-content" style="max-height: 95vh;">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal('modalDetail')">✕</button>
+            </div>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <!-- 编辑手记模态框 -->
+    <div class="modal-overlay" id="modalBio">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑冒险者手记</h3>
+                <button class="modal-close" onclick="closeModal('modalBio')">✕</button>
+            </div>
+            <form onsubmit="saveBio(event)">
+                <div class="form-group">
+                    <label class="form-label">冒险者代号</label>
+                    <input type="text" class="form-input" id="editCharName" placeholder="你的名字...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">手记内容</label>
+                    <textarea class="form-textarea" id="editBioText" rows="6" placeholder="写下你的故事..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">保存手记</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ===== 数据存储 =====
+        const STORAGE_KEY = 'rezero_adventure_data';
+
+        let appData = {
+            quests: [],
+            character: {
+                name: '冒险者',
+                bio: '从异世界转生而来的冒险者，正在书写属于自己的传奇。\n\n「即使从零开始，也要开辟通往未来的道路。」',
+                energy: { dream: 0, wisdom: 0, life: 0 },
+                achievements: []
+            },
+            achievements: [
+                { id: 'first_quest', name: '启程之人', icon: '🌟', desc: '发布第一个任务', unlocked: false },
+                { id: 'first_complete', name: '初战告捷', icon: '⚔️', desc: '完成第一个任务', unlocked: false },
+                { id: 'dream_50', name: '梦想家', icon: '🔮', desc: '梦想之力达到50', unlocked: false },
+                { id: 'wisdom_50', name: '博学者', icon: '📚', desc: '智慧之力达到50', unlocked: false },
+                { id: 'life_50', name: '生命守护者', icon: '🌿', desc: '生命源力达到50', unlocked: false },
+                { id: 'complete_10', name: '资深冒险者', icon: '🏆', desc: '完成10个任务', unlocked: false },
+                { id: 'complete_50', name: '传说级英雄', icon: '👑', desc: '完成50个任务', unlocked: false },
+                { id: 'all_types', name: '全能战士', icon: '⚡', desc: '完成三种类型的任务', unlocked: false },
+                { id: 'diary_5', name: '记录者', icon: '📝', desc: '写下5篇任务日记', unlocked: false },
+                { id: 'master', name: '命运主宰', icon: '✨', desc: '所有能量达到100', unlocked: false }
+            ]
+        };
+
+        let currentQuestType = 'main';
+        let selectedRewards = [];
+
+        // ===== 初始化 =====
+        function init() {
+            loadData();
+            createStars();
+            renderQuests();
+            renderCharacter();
+            renderAchievements();
+            updateBadges();
+
+            // 注册 Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+            }
+        }
+
+        function createStars() {
+            const container = document.getElementById('starsBg');
+            for (let i = 0; i < 60; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = Math.random() * 3 + 1 + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = Math.random() * 3 + 's';
+                container.appendChild(star);
+            }
+        }
+
+        // ===== 数据管理 =====
+        function loadData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appData = { ...appData, ...parsed };
+                    // 确保成就列表完整
+                    if (!appData.achievements || appData.achievements.length === 0) {
+                        appData.achievements = [
+                            { id: 'first_quest', name: '启程之人', icon: '🌟', desc: '发布第一个任务', unlocked: false },
+                            { id: 'first_complete', name: '初战告捷', icon: '⚔️', desc: '完成第一个任务', unlocked: false },
+                            { id: 'dream_50', name: '梦想家', icon: '🔮', desc: '梦想之力达到50', unlocked: false },
+                            { id: 'wisdom_50', name: '博学者', icon: '📚', desc: '智慧之力达到50', unlocked: false },
+                            { id: 'life_50', name: '生命守护者', icon: '🌿', desc: '生命源力达到50', unlocked: false },
+                            { id: 'complete_10', name: '资深冒险者', icon: '🏆', desc: '完成10个任务', unlocked: false },
+                            { id: 'complete_50', name: '传说级英雄', icon: '👑', desc: '完成50个任务', unlocked: false },
+                            { id: 'all_types', name: '全能战士', icon: '⚡', desc: '完成三种类型的任务', unlocked: false },
+                            { id: 'diary_5', name: '记录者', icon: '📝', desc: '写下5篇任务日记', unlocked: false },
+                            { id: 'master', name: '命运主宰', icon: '✨', desc: '所有能量达到100', unlocked: false }
+                        ];
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        }
+
+        // ===== 页面切换 =====
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (page === 'character') {
+                renderCharacter();
+                renderAchievements();
+            }
+
+            // 控制FAB显示
+            document.getElementById('fabAdd').style.display = page === 'quests' ? 'flex' : 'none';
+        }
+
+        function switchQuestType(type) {
+            currentQuestType = type;
+            document.querySelectorAll('.quest-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-type="${type}"]`).classList.add('active');
+            renderQuests();
+        }
+
+        // ===== 任务管理 =====
+        function renderQuests() {
+            const list = document.getElementById('questList');
+            const quests = appData.quests.filter(q => q.type === currentQuestType);
+
+            if (quests.length === 0) {
+                const typeNames = { main: '主线', side: '支线', sudden: '突发' };
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📜</div>
+                        <div class="empty-state-text">暂无${typeNames[currentQuestType]}任务</div>
+                        <div class="empty-state-hint">点击右下角按钮发布新任务</div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = quests.map(quest => `
+                <div class="quest-card ${quest.completed ? 'completed' : ''}" onclick="openQuestDetail('${quest.id}')">
+                    <div class="quest-card-header">
+                        <div class="quest-title">${escapeHtml(quest.name)}</div>
+                        <div class="quest-type-icon">${getTypeIcon(quest.type)}</div>
+                    </div>
+                    <div class="quest-desc">${escapeHtml(quest.desc || '暂无描述')}</div>
+                    <div class="quest-footer">
+                        <div class="quest-rewards">
+                            ${(quest.rewards || []).map(r => `
+                                <span class="reward-tag reward-${r.type}">${r.icon} +${r.value}</span>
+                            `).join('')}
+                        </div>
+                        ${quest.diary && quest.diary.length > 0 ? `<span style="font-size:0.7rem;color:var(--text-secondary)">📝 ${quest.diary.length}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getTypeIcon(type) {
+            return { main: '⚔️', side: '🗡️', sudden: '⚡' }[type] || '📜';
+        }
+
+        function updateBadges() {
+            ['main', 'side', 'sudden'].forEach(type => {
+                const count = appData.quests.filter(q => q.type === type && !q.completed).length;
+                const badge = document.getElementById('badge-' + type);
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            });
+        }
+
+        // ===== 模态框 =====
+        function openAddModal() {
+            document.getElementById('questForm').reset();
+            document.getElementById('questId').value = '';
+            document.getElementById('modalQuestTitle').textContent = '发布新任务';
+            selectedRewards = [];
+            document.querySelectorAll('.reward-option').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('modalQuest').classList.add('active');
+        }
+
+        function openEditModal(quest) {
+            document.getElementById('questId').value = quest.id;
+            document.getElementById('questType').value = quest.type;
+            document.getElementById('questName').value = quest.name;
+            document.getElementById('questDesc').value = quest.desc || '';
+            document.getElementById('questAchievement').value = quest.achievement || '';
+            document.getElementById('modalQuestTitle').textContent = '编辑任务';
+
+            selectedRewards = quest.rewards || [];
+            document.querySelectorAll('.reward-option').forEach(btn => {
+                const type = btn.dataset.type;
+                const hasReward = selectedRewards.find(r => r.type === type);
+                btn.classList.toggle('selected', !!hasReward);
+            });
+
+            document.getElementById('modalQuest').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function toggleReward(btn) {
+            const type = btn.dataset.type;
+            const icons = { dream: '🔮', wisdom: '📖', life: '🌿' };
+            const names = { dream: '梦想之力', wisdom: '智慧之力', life: '生命源力' };
+
+            if (btn.classList.contains('selected')) {
+                btn.classList.remove('selected');
+                selectedRewards = selectedRewards.filter(r => r.type !== type);
+            } else {
+                btn.classList.add('selected');
+                selectedRewards.push({ type, value: 10, icon: icons[type], name: names[type] });
+            }
+        }
+
+        function saveQuest(e) {
+            e.preventDefault();
+            const id = document.getElementById('questId').value;
+            const quest = {
+                id: id || Date.now().toString(),
+                type: document.getElementById('questType').value,
+                name: document.getElementById('questName').value,
+                desc: document.getElementById('questDesc').value,
+                rewards: selectedRewards,
+                achievement: document.getElementById('questAchievement').value,
+                completed: false,
+                diary: []
+            };
+
+            if (id) {
+                const idx = appData.quests.findIndex(q => q.id === id);
+                if (idx >= 0) {
+                    quest.completed = appData.quests[idx].completed;
+                    quest.diary = appData.quests[idx].diary || [];
+                    appData.quests[idx] = quest;
+                }
+            } else {
+                appData.quests.push(quest);
+                checkAchievement('first_quest');
+            }
+
+            saveData();
+            closeModal('modalQuest');
+            renderQuests();
+            updateBadges();
+        }
+
+        // ===== 任务详情 =====
+        function openQuestDetail(questId) {
+            const quest = appData.quests.find(q => q.id === questId);
+            if (!quest) return;
+
+            const typeNames = { main: '主线任务', side: '支线任务', sudden: '突发任务' };
+            const typeColors = { main: '#d4af37', side: '#6bb6ff', sudden: '#e74c3c' };
+
+            document.getElementById('detailContent').innerHTML = `
+                <div class="quest-detail-header">
+                    <div class="quest-detail-type" style="color: ${typeColors[quest.type]}">${typeNames[quest.type]}</div>
+                    <h2 class="quest-detail-title">${escapeHtml(quest.name)}</h2>
+                    <div class="quest-detail-meta">
+                        ${(quest.rewards || []).map(r => `
+                            <span class="reward-tag reward-${r.type}">${r.icon} ${r.name} +${r.value}</span>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="quest-detail-section">
+                    <div class="section-title">📜 任务详情</div>
+                    <div class="section-content">${escapeHtml(quest.desc || '暂无描述')}</div>
+                </div>
+
+                ${quest.achievement ? `
+                <div class="quest-detail-section">
+                    <div class="section-title">🏆 任务成就</div>
+                    <div class="section-content">${escapeHtml(quest.achievement)}</div>
+                </div>
+                ` : ''}
+
+                <div class="quest-detail-section">
+                    <div class="section-title">📝 任务日记</div>
+                    <div id="diaryList">
+                        ${(quest.diary || []).length === 0 ? 
+                            '<div style="color:var(--text-secondary);font-size:0.85rem;padding:10px 0;">还没有日记记录...</div>' :
+                            quest.diary.map(d => `
+                                <div class="diary-entry">
+                                    <div class="diary-date">${formatDate(d.date)}</div>
+                                    <div class="diary-text">${escapeHtml(d.text)}</div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                    <div class="diary-input-area">
+                        <textarea class="form-textarea" id="diaryInput" rows="3" placeholder="记录这次冒险的感想..."></textarea>
+                        <button class="btn btn-secondary" style="margin-top:8px;" onclick="addDiary('${quest.id}')">
+                            ✦ 添加日记
+                        </button>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="margin-top:24px;">
+                    ${!quest.completed ? `
+                        <button class="btn btn-primary" onclick="completeQuest('${quest.id}')">
+                            ✦ 完成任务
+                        </button>
+                    ` : `
+                        <button class="btn btn-secondary" disabled>
+                            ✦ 已完成
+                        </button>
+                    `}
+                    <button class="btn btn-secondary" onclick="openEditModalById('${quest.id}')">
+                        编辑
+                    </button>
+                </div>
+
+                <button class="btn btn-danger" style="margin-top:10px;" onclick="deleteQuest('${quest.id}')">
+                    删除任务
+                </button>
+            `;
+
+            document.getElementById('modalDetail').classList.add('active');
+        }
+
+        function openEditModalById(questId) {
+            closeModal('modalDetail');
+            setTimeout(() => {
+                const quest = appData.quests.find(q => q.id === questId);
+                if (quest) openEditModal(quest);
+            }, 300);
+        }
+
+        function addDiary(questId) {
+            const text = document.getElementById('diaryInput').value.trim();
+            if (!text) return;
+
+            const quest = appData.quests.find(q => q.id === questId);
+            if (!quest) return;
+
+            if (!quest.diary) quest.diary = [];
+            quest.diary.unshift({ date: new Date().toISOString(), text });
+
+            saveData();
+
+            // 检查日记成就
+            const totalDiaries = appData.quests.reduce((sum, q) => sum + (q.diary || []).length, 0);
+            if (totalDiaries >= 5) checkAchievement('diary_5');
+
+            openQuestDetail(questId);
+        }
+
+        function completeQuest(questId) {
+            const quest = appData.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) return;
+
+            quest.completed = true;
+            quest.completedAt = new Date().toISOString();
+
+            // 增加能量
+            (quest.rewards || []).forEach(reward => {
+                if (appData.character.energy[reward.type] !== undefined) {
+                    appData.character.energy[reward.type] += reward.value;
+                    if (appData.character.energy[reward.type] > 100) {
+                        appData.character.energy[reward.type] = 100;
+                    }
+                }
+            });
+
+            // 添加成就
+            if (quest.achievement) {
+                appData.character.achievements.push({
+                    name: quest.achievement,
+                    date: new Date().toISOString(),
+                    questName: quest.name
+                });
+            }
+
+            saveData();
+            closeModal('modalDetail');
+
+            // 播放庆祝动画
+            playCompletionAnimation(quest.rewards || []);
+
+            // 检查成就
+            checkAchievement('first_complete');
+            if (appData.character.energy.dream >= 50) checkAchievement('dream_50');
+            if (appData.character.energy.wisdom >= 50) checkAchievement('wisdom_50');
+            if (appData.character.energy.life >= 50) checkAchievement('life_50');
+
+            const completedCount = appData.quests.filter(q => q.completed).length;
+            if (completedCount >= 10) checkAchievement('complete_10');
+            if (completedCount >= 50) checkAchievement('complete_50');
+
+            const completedTypes = new Set(appData.quests.filter(q => q.completed).map(q => q.type));
+            if (completedTypes.size >= 3) checkAchievement('all_types');
+
+            if (appData.character.energy.dream >= 100 && 
+                appData.character.energy.wisdom >= 100 && 
+                appData.character.energy.life >= 100) {
+                checkAchievement('master');
+            }
+
+            renderQuests();
+            updateBadges();
+            renderCharacter();
+        }
+
+        function deleteQuest(questId) {
+            if (!confirm('确定要删除这个任务吗？相关的日记记录也会消失。')) return;
+            appData.quests = appData.quests.filter(q => q.id !== questId);
+            saveData();
+            closeModal('modalDetail');
+            renderQuests();
+            updateBadges();
+        }
+
+        // ===== 庆祝动画 =====
+        function playCompletionAnimation(rewards) {
+            const container = document.getElementById('celebration');
+            container.innerHTML = '';
+            container.classList.add('active');
+
+            const colors = [];
+            rewards.forEach(r => {
+                if (r.type === 'dream') colors.push('#c084fc', '#9b59b6');
+                if (r.type === 'wisdom') colors.push('#6bb6ff', '#3498db');
+                if (r.type === 'life') colors.push('#6ee7b7', '#2ecc71');
+            });
+            if (colors.length === 0) colors.push('#d4af37', '#f0d878');
+
+            // 星星粒子
+            for (let i = 0; i < 30; i++) {
+                const star = document.createElement('div');
+                star.className = 'star-particle';
+                star.innerHTML = '✦';
+                star.style.left = '50%';
+                star.style.top = '50%';
+                star.style.color = colors[Math.floor(Math.random() * colors.length)];
+                const angle = (Math.PI * 2 * i) / 30;
+                const dist = 100 + Math.random() * 200;
+                const tx = Math.cos(angle) * dist;
+                const ty = Math.sin(angle) * dist;
+                const tx2 = tx * 1.5;
+                const ty2 = ty * 1.5 + 100;
+                star.style.setProperty('--tx', tx + 'px');
+                star.style.setProperty('--ty', ty + 'px');
+                star.style.setProperty('--tx2', tx2 + 'px');
+                star.style.setProperty('--ty2', ty2 + 'px');
+                star.style.animationDelay = Math.random() * 0.3 + 's';
+                container.appendChild(star);
+            }
+
+            // 升级文字
+            const levelUp = document.createElement('div');
+            levelUp.className = 'level-up-text';
+            levelUp.textContent = '任务完成！';
+            container.appendChild(levelUp);
+
+            setTimeout(() => {
+                container.classList.remove('active');
+            }, 2500);
+        }
+
+        // ===== 角色页面 =====
+        function renderCharacter() {
+            document.getElementById('charName').textContent = appData.character.name;
+            document.getElementById('bioText').textContent = appData.character.bio;
+
+            const completed = appData.quests.filter(q => q.completed).length;
+            const total = appData.quests.length;
+            const achievementCount = appData.achievements.filter(a => a.unlocked).length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statAchievements').textContent = achievementCount;
+
+            // 等级计算
+            const level = Math.floor(completed / 5) + 1;
+            document.getElementById('charLevel').textContent = level;
+
+            // 能量条
+            ['dream', 'wisdom', 'life'].forEach(type => {
+                const val = appData.character.energy[type] || 0;
+                document.getElementById('val' + type.charAt(0).toUpperCase() + type.slice(1)).textContent = val;
+                document.getElementById('bar' + type.charAt(0).toUpperCase() + type.slice(1)).style.width = val + '%';
+            });
+        }
+
+        function renderAchievements() {
+            const grid = document.getElementById('achievementsGrid');
+            grid.innerHTML = appData.achievements.map(a => `
+                <div class="achievement-item ${a.unlocked ? 'unlocked' : 'locked'}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-name">${a.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function editBio() {
+            document.getElementById('editCharName').value = appData.character.name;
+            document.getElementById('editBioText').value = appData.character.bio;
+            document.getElementById('modalBio').classList.add('active');
+        }
+
+        function saveBio(e) {
+            e.preventDefault();
+            appData.character.name = document.getElementById('editCharName').value || '冒险者';
+            appData.character.bio = document.getElementById('editBioText').value;
+            saveData();
+            closeModal('modalBio');
+            renderCharacter();
+        }
+
+        function checkAchievement(id) {
+            const ach = appData.achievements.find(a => a.id === id);
+            if (ach && !ach.unlocked) {
+                ach.unlocked = true;
+                ach.unlockedAt = new Date().toISOString();
+                saveData();
+
+                // 显示解锁提示
+                setTimeout(() => {
+                    showToast(`🏆 成就解锁：${ach.name}`);
+                }, 500);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(26, 15, 46, 0.95);
+                border: 1px solid var(--primary-gold);
+                border-radius: 12px;
+                padding: 12px 24px;
+                color: var(--primary-gold);
+                font-size: 0.9rem;
+                z-index: 10000;
+                box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+                animation: fadeIn 0.5s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ===== 工具函数 =====
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(iso) {
+            const d = new Date(iso);
+            return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+
+        // 点击遮罩关闭模态框
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modal.id);
+            });
+        });
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>
