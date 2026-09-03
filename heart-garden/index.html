@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>心的花园 · 抽卡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#efebce; --paper-deep:#e6e0bd; --ink:#064013;
+  --ink-soft:rgba(6,64,19,.62); --ink-faint:rgba(6,64,19,.34);
+  --card:#f6f3e2; --accent:#c2521e;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:"Noto Sans SC",-apple-system,"PingFang SC",sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.02 0 0 0 0 0.25 0 0 0 0 0.07 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 90% 55% at 50% -8%, rgba(255,252,235,.9), transparent 65%);}
+.serif{font-family:"Noto Serif SC","Songti SC","STSong",serif}
+.screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:6vh 22px 60px}
+.hidden{display:none}
+.num{font-family:"Noto Serif SC",serif;font-variant-numeric:tabular-nums}
+
+/* ---------- home ---------- */
+.brand{margin:1vh 0 0;text-align:center}
+.brand .mark{width:44px;height:44px;margin:0 auto 14px}
+.brand h1{font-weight:900;font-size:clamp(34px,6vw,52px);letter-spacing:.14em}
+.brand h1 .dot{color:var(--accent)}
+.brand p{margin-top:10px;font-size:13px;letter-spacing:.28em;color:var(--ink-soft)}
+.divider{width:44px;height:1px;background:var(--ink-faint);margin:4.5vh auto 3.5vh}
+.prompt{font-size:15px;letter-spacing:.14em;color:var(--ink-soft);margin-bottom:3vh}
+.states{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(560px,100%)}
+@media(min-width:560px){.states{grid-template-columns:repeat(3,1fr)}}
+.state{appearance:none;border:none;cursor:pointer;text-align:left;background:var(--card);border-radius:16px;padding:18px 16px 16px;color:var(--ink);
+  box-shadow:0 1px 0 rgba(6,64,19,.08),0 10px 26px -18px rgba(6,64,19,.35);transition:transform .25s ease}
+.state:hover{transform:translateY(-3px)}
+.state:active{transform:translateY(-1px) scale(.98)}
+.state .glyph{display:block;width:26px;height:26px;margin-bottom:10px}
+.state .name{font-family:"Noto Serif SC","Songti SC",serif;font-weight:600;font-size:17px;letter-spacing:.06em}
+.state .sub{display:block;margin-top:5px;font-size:11px;letter-spacing:.1em;color:var(--ink-faint)}
+.state.is-fun{grid-column:1/-1;background:var(--ink);color:var(--paper)}
+.state.is-fun .sub{color:rgba(239,235,206,.5)}
+.edit-link{margin-top:5vh;appearance:none;background:none;border:none;cursor:pointer;
+  font-size:12px;letter-spacing:.22em;color:var(--ink-soft);border-bottom:1px solid var(--ink-faint);padding-bottom:3px}
+.edit-link:hover{color:var(--ink)}
+.home-note{margin-top:2.5vh;font-size:11px;letter-spacing:.12em;color:var(--ink-faint);text-align:center;line-height:2}
+
+/* ---------- topbar ---------- */
+.topbar{width:min(640px,100%);display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2.5vh}
+.back{appearance:none;border:none;background:none;cursor:pointer;font-size:13px;letter-spacing:.14em;color:var(--ink-soft);padding:6px 2px}
+.back:hover{color:var(--ink)}
+.crumb{font-size:12px;letter-spacing:.2em;color:var(--ink-faint)}
+.stage-title{text-align:center;margin-bottom:3.5vh}
+.stage-title .now{font-size:12px;letter-spacing:.3em;color:var(--ink-soft);margin-bottom:8px}
+.stage-title h2{font-weight:900;font-size:clamp(24px,5vw,34px);letter-spacing:.1em}
+.stage-title .s{margin-top:8px;font-size:12px;letter-spacing:.16em;color:var(--ink-faint)}
+
+/* ---------- draw ---------- */
+.decks{display:flex;flex-direction:column;align-items:center;gap:4.5vh;width:100%}
+.card-scene{perspective:1200px;width:min(340px,86vw)}
+.card{position:relative;width:100%;aspect-ratio:5/7;cursor:pointer;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.22,1,.3,1)}
+.card.flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:18px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px 28px;text-align:center}
+.face.back-face{background:var(--ink);color:var(--paper);box-shadow:0 24px 50px -22px rgba(6,64,19,.55)}
+.face.back-face .deck-label{font-size:12px;letter-spacing:.4em;color:rgba(239,235,206,.55);margin-bottom:18px}
+.face.back-face .deck-name{font-family:"Noto Serif SC","Songti SC",serif;font-weight:900;font-size:26px;letter-spacing:.2em}
+.face.back-face svg{margin-top:22px;opacity:.8}
+.face.front-face{background:var(--card);color:var(--ink);transform:rotateY(180deg);box-shadow:0 24px 50px -24px rgba(6,64,19,.4)}
+.card-no{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--ink-faint)}
+.card-no::before,.card-no::after{content:"";width:26px;height:1px;background:var(--ink-faint)}
+.card-no .n{font-size:15px;letter-spacing:.12em}
+.face.front-face .kind{font-size:11px;letter-spacing:.34em;color:var(--ink-faint);margin-bottom:18px}
+.face.front-face .text{font-family:"Noto Serif SC","Songti SC",serif;font-weight:600;font-size:clamp(17px,4.5vw,21px);line-height:1.9;letter-spacing:.04em}
+.face.front-face .from{margin-top:20px;font-size:10px;letter-spacing:.2em;color:var(--ink-faint)}
+.card:hover:not(.flipped){transform:rotateY(-8deg)}
+.card:not(.flipped){animation:float 4s ease-in-out infinite}
+@keyframes float{0%,100%{translate:0 0}50%{translate:0 -8px}}
+.deck-caption{margin-top:16px;text-align:center;font-size:12px;letter-spacing:.14em;color:var(--ink-faint);min-height:18px}
+.deck-block{display:flex;flex-direction:column;align-items:center}
+.draw-btn{appearance:none;cursor:pointer;margin-top:2px;border:1px solid var(--ink);background:transparent;color:var(--ink);
+  border-radius:999px;padding:12px 34px;font-size:14px;letter-spacing:.24em;font-family:inherit;transition:background .25s,color .25s}
+.draw-btn:hover{background:var(--ink);color:var(--paper)}
+.arrow-hint{font-size:20px;color:var(--ink-faint)}
+
+/* ---------- fun sub ---------- */
+.funsubs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(560px,100%)}
+
+/* ---------- edit ---------- */
+.edit-wrap{width:min(680px,100%);display:flex;flex-direction:column;gap:14px}
+.acc{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 1px 0 rgba(6,64,19,.08),0 10px 26px -18px rgba(6,64,19,.3)}
+.acc-head{display:flex;align-items:center;gap:12px;padding:16px 18px;cursor:pointer;user-select:none}
+.acc-head .t{font-family:"Noto Serif SC",serif;font-weight:600;font-size:16px;flex:1}
+.acc-head .cnt{font-size:11px;color:var(--ink-faint);letter-spacing:.06em}
+.acc-head .arr{transition:transform .3s;color:var(--ink-faint)}
+.acc.open .acc-head .arr{transform:rotate(90deg)}
+.acc-body{display:none;padding:0 18px 18px;border-top:1px solid rgba(6,64,19,.08)}
+.acc.open .acc-body{display:block}
+.field{margin-top:14px}
+.field label{display:block;font-size:11px;letter-spacing:.18em;color:var(--ink-faint);margin-bottom:6px}
+.field input[type=text]{width:100%;border:none;border-bottom:1px solid var(--ink-faint);background:transparent;padding:7px 2px;font-size:15px;font-family:inherit;color:var(--ink);outline:none}
+.field input[type=text]:focus{border-color:var(--ink)}
+.list-title{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 10px}
+.list-title .lt{font-size:13px;letter-spacing:.2em;font-weight:500}
+.list-title .lc{font-size:11px;color:var(--ink-faint)}
+.item-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px dashed rgba(6,64,19,.12)}
+.item-row .no{font-size:13px;color:var(--ink-faint);min-width:34px;padding-top:1px}
+.item-row .tx{flex:1;font-size:14px;line-height:1.7}
+.item-row .ed,.item-row .del{appearance:none;background:none;border:none;cursor:pointer;font-size:12px;color:var(--ink-faint);padding:2px 4px;flex-shrink:0}
+.item-row .ed:hover,.item-row .del:hover{color:var(--accent)}
+.item-row.editing .tx{display:none}
+.item-row.editing .no{display:none}
+.item-row .editbox{display:none;flex:1;gap:8px}
+.item-row.editing .editbox{display:flex}
+.item-row .editbox input{flex:1;border:none;border-bottom:1px solid var(--ink);background:transparent;font-size:14px;font-family:inherit;padding:4px 2px;outline:none;color:var(--ink)}
+.item-row .editbox button{appearance:none;background:var(--ink);color:var(--paper);border:none;border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer}
+.add-row{display:flex;gap:8px;margin-top:12px}
+.add-row input{flex:1;border:none;border-bottom:1px solid var(--ink-faint);background:transparent;padding:7px 2px;font-size:14px;font-family:inherit;outline:none;color:var(--ink)}
+.add-row input:focus{border-color:var(--ink)}
+.add-row button,.mini-btn{appearance:none;cursor:pointer;border:1px solid var(--ink);background:transparent;color:var(--ink);border-radius:999px;padding:7px 18px;font-size:12px;letter-spacing:.12em;font-family:inherit}
+.add-row button:hover,.mini-btn:hover{background:var(--ink);color:var(--paper)}
+.lnk{appearance:none;background:none;border:none;cursor:pointer;font-size:11px;color:var(--ink-soft);padding:2px 3px;border-bottom:1px solid var(--ink-faint);font-family:inherit;letter-spacing:.04em}
+.lnk:hover{color:var(--accent);border-color:var(--accent)}
+.batch-hint{margin-top:8px;font-size:11px;line-height:1.9;color:var(--ink-faint);letter-spacing:.04em}
+.danger{color:var(--accent)!important;border-color:var(--accent)!important}
+.danger:hover{background:var(--accent)!important;color:#fff!important}
+.edit-actions{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0 10px;justify-content:center}
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);
+  padding:10px 26px;border-radius:999px;font-size:13px;letter-spacing:.14em;opacity:0;transition:all .35s ease;z-index:9;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.sub-block{border:1px dashed rgba(6,64,19,.2);border-radius:12px;padding:12px 14px;margin-top:14px}
+.sub-block .sb-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.sub-block .sb-head input{flex:1;border:none;border-bottom:1px solid var(--ink-faint);background:transparent;font-size:15px;font-weight:500;font-family:inherit;padding:5px 2px;outline:none;color:var(--ink)}
+.footer-note{position:fixed;bottom:14px;left:0;right:0;text-align:center;font-size:10px;letter-spacing:.22em;color:var(--ink-faint);z-index:1}
+</style>
+</head>
+<body>
+
+<!-- ============ 面板 ============ -->
+<section id="home" class="screen">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 44 44" fill="none" stroke="#064013" stroke-width="1.6">
+      <path d="M22 40 C22 28 22 20 22 10" stroke-linecap="round"/>
+      <path d="M22 22 C14 22 9 17 8 10 C16 10 21 14 22 22Z" fill="#064013" opacity=".85"/>
+      <path d="M22 16 C30 16 35 11 36 4 C28 4 23 8 22 16Z" fill="#064013" opacity=".55"/>
+      <circle cx="22" cy="40" r="2.2" fill="#c2521e" stroke="none"/>
+    </svg>
+    <h1 class="serif">心的花园<span class="dot">。</span></h1>
+    <p>从两年的日记里长出来的抽卡</p>
+  </div>
+  <div class="divider"></div>
+  <p class="prompt">现在，你的状态是——</p>
+  <div id="stateGrid" class="states"></div>
+  <button class="edit-link" id="toEdit">修 剪 花 园 · 编 辑 卡 池</button>
+  <p class="home-note">每一件事都来自你的日记，每一句话都是你自己写下的。<br>所有修改都会保存在这台设备上。</p>
+</section>
+
+<!-- ============ 找点乐子 · 分类 ============ -->
+<section id="funhome" class="screen hidden">
+  <div class="topbar"><button class="back" data-go="home">← 回到花园</button><span class="crumb">心的花园 · 找点乐子</span></div>
+  <div class="stage-title"><div class="now">找 点 乐 子</div><h2 class="serif">想怎么乐？</h2><div class="s">选一叠，抽一张</div></div>
+  <div id="funGrid" class="funsubs states"></div>
+</section>
+
+<!-- ============ 抽卡台 ============ -->
+<section id="draw" class="screen hidden">
+  <div class="topbar"><button class="back" id="backBtn">← 换个状态</button><span class="crumb" id="crumb"></span></div>
+  <div class="stage-title">
+    <div class="now" id="nowLabel">当前状态</div>
+    <h2 class="serif" id="stateName"></h2>
+    <div class="s" id="stateSub"></div>
+  </div>
+  <div class="decks">
+    <div class="deck-block">
+      <div class="card-scene"><div class="card" id="actionCard">
+        <div class="face back-face"><div class="deck-label">DECK Ⅰ</div><div class="deck-name">可以做的事</div>
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none" stroke="#efebce" stroke-width="1.4"><path d="M30 52 C30 36 30 26 30 12" stroke-linecap="round"/><path d="M30 30 C20 30 14 24 13 14 C23 14 29 20 30 30Z"/><path d="M30 22 C40 22 46 16 47 6 C37 6 31 12 30 22Z" opacity=".6"/></svg>
+        </div>
+        <div class="face front-face">
+          <div class="card-no"><span class="n num" id="actionNo"></span></div>
+          <div class="kind">去做这件事</div>
+          <div class="text serif" id="actionText"></div>
+          <div class="from" id="actionFrom">— 来自你的花园 —</div>
+        </div>
+      </div></div>
+      <div class="deck-caption" id="actionHint"></div>
+      <button class="draw-btn" id="actionBtn">抽 一 件 事</button>
+    </div>
+    <div class="arrow-hint">↓</div>
+    <div class="deck-block">
+      <div class="card-scene"><div class="card" id="quoteCard">
+        <div class="face back-face"><div class="deck-label">DECK Ⅱ</div><div class="deck-name">给自己的话</div>
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none" stroke="#efebce" stroke-width="1.4"><path d="M14 18 Q14 12 20 12 Q26 12 26 18 Q26 26 16 30" stroke-linecap="round"/><path d="M36 18 Q36 12 42 12 Q48 12 48 18 Q48 26 38 30" stroke-linecap="round"/><path d="M12 44 Q30 52 48 44" stroke-linecap="round" opacity=".6"/></svg>
+        </div>
+        <div class="face front-face">
+          <div class="card-no"><span class="n num" id="quoteNo"></span></div>
+          <div class="kind">对你说</div>
+          <div class="text serif" id="quoteText"></div>
+          <div class="from" id="quoteFrom">— 你亲手写下的 —</div>
+        </div>
+      </div></div>
+      <div class="deck-caption" id="quoteHint"></div>
+      <button class="draw-btn" id="quoteBtn">抽 一 句 话</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 编辑页 ============ -->
+<section id="edit" class="screen hidden">
+  <div class="topbar"><button class="back" data-go="home">← 回到花园</button><span class="crumb">修剪花园 · 编辑卡池</span></div>
+  <div class="stage-title"><div class="now">编 辑</div><h2 class="serif">修剪花园</h2><div class="s">改动自动保存到这台设备</div></div>
+  <div class="edit-wrap" id="editWrap"></div>
+  <div class="edit-actions">
+    <button class="mini-btn" id="addStateBtn">＋ 新增状态</button>
+    <button class="mini-btn" id="exportBtn">导 出 全 部 数 据</button>
+    <button class="mini-btn" id="importBtn">导 入 全 部 数 据</button>
+    <button class="mini-btn danger" id="resetBtn">恢复初始卡池</button>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<div class="footer-note">心的花园 · 由你自己的文字建成</div>
+
+<script>
+/* ================= 初始数据 ================= */
+const DEFAULT_DATA = {
+states:[
+{id:"anxiety",name:"焦虑 · 有事逼近",sub:"考试、死线、不确定",actions:[
+"做一套八段锦，然后抄一遍《心经》——你用这个组合赢过",
+"把害怕的事逐条写下来，每条问：这种感觉，我能释放掉吗",
+"拆成四步：确定考什么 → 怎么复习 → 找资料 → 开始。只走第一步",
+"换地方。去文华楼、图书馆或咖啡馆，让环境替你切换状态",
+"先准备最能把握的部分——能抓住的先抓住",
+"告诉自己：不求完全充分，发挥出 80% 就够",
+"手机放到另一个房间，设一个 25 分钟闹钟",
+"用 RAIN：觉察它 → 允许它 → 观察身体的变化 → 不认同它",
+"泡一杯热茶，双手捧着，慢慢喝完",
+"回想一次你赢了的场景，尽量细致地重播一遍（HEAL 法）",
+"把「我好害怕」改写成「事情开始变得有趣起来了」",
+"给老师或朋友发条消息，约一次见面聊聊",
+"把明天要做的事写在纸上，写完就去睡觉"],
+quotes:[
+"一切恐惧源于未知。明确了目的，就尽管去做",
+"我是安全的。这件事决定不了我的一生",
+"把紧张变成迎接挑战的兴奋",
+"快乐才是做事最大的 BUFF",
+"训练的时候像从来没赢过，比赛的时候像从来没输过",
+"压力是一种特权",
+"恐惧会以你的恐惧出现，化解的方式是嘲笑它",
+"就算全力以赴，十天也远远不到我的极限",
+"千万不要提前恐惧——事情会以奇怪的方式解决",
+"没有对手，只有陪我演一场戏的角色",
+"相信的心，是我的魔法",
+"正念、正信。多见有正气的人，心怀感恩，远离负能量"]},
+{id:"tired",name:"疲惫 · 没能量了",sub:"身体先于一切",actions:[
+"想睡的时候，直接睡。这是你自己写下的医嘱",
+"洗一个滚烫的热水澡，站到水雾里",
+"足三里贴一片艾草贴",
+"去晒十五分钟太阳，什么都不干",
+"打一套简化版八段锦",
+"认真吃一顿好的，汤也要喝完",
+"今天只做低负荷的事：碰一下正事就算数",
+"定个闹钟，午睡二十分钟",
+"出门走十分钟，不戴耳机",
+"只收拾桌面的一个角落",
+"给自己冲一杯热饮——黄金牛奶或普洱",
+"躺下听一段雨声或白噪音"],
+quotes:[
+"先别死，效率的事以后再说",
+"休息不是努力后的奖励，是系统运行的一部分",
+"不要用从前能承受的压力，要求现在这个受损的系统",
+"睡一觉，可以消化大部分的焦虑",
+"每天只需要回顾和预处理，不需要全力输出",
+"我不需要做完才能休息。碰过，就可以安心休息",
+"身体是一切的开始",
+"低负荷持续，不完美前进",
+"潮起潮落，我每天都还是在认真过的",
+"现在不是冲刺期。慢慢把自己充上电",
+"疲惫之后没有及时恢复是不行的——所以现在恢复"]},
+{id:"empty",name:"空虚 · 什么都不对劲",sub:"刷屏之后的空",actions:[
+"打开文档写 200 字，写什么都行",
+"找一部「有结局的」作品看，不看连载",
+"把最近一件小事写成一段观察笔记",
+"出门散步，不带手机",
+"给一个朋友发一条消息",
+"抄一页经，或练一页字",
+"把积攒的衣服洗了、被子晒了",
+"认真做一顿饭",
+"给植物浇水，看看它们长了没有",
+"翻出日记里的高光片段，读一遍",
+"去买一袋鸟粮，喂一次鸟",
+"整理一个抽屉"],
+quotes:[
+"要创作，创作可以治疗我的无聊病",
+"空虚，是创作欲在敲门",
+"在无事之事之间，人生的意义得以真正显现",
+"我每天的生活，就是我的人生主线",
+"找不到合心意的小说，是老天让我自己去写",
+"人就活那么几个瞬间——去制造一个",
+"别一味地消费了，表达一点什么",
+"我真正想要的不是激素，是澄澈的真情",
+"时间流过，而非时间被填充"]},
+{id:"guilt",name:"自责 · 在怪自己",sub:"内耗、失信、懊悔",actions:[
+"把自责写下来，然后逐条写出它的反义词版本",
+"问一句：这件事，三到六个月后还重要吗",
+"做一个最小的物理动作：发一封邮件，或打开一个文档",
+"对自己说：我允许我今天只做到这里",
+"去洗头洗澡，物理重启一次",
+"写下今天做对的三件小事，再小也算",
+"把事情分成两列：能改变的 / 不能改变的。只处理左边",
+"停止向那个不存在的审判席提交申诉",
+"打一套八段锦，把注意力还给身体",
+"翻出上次做成一件事的记录，看一眼"],
+quotes:[
+"昨日俱往矣",
+"停止对自己的鞭打",
+"夸奖了所有人，别忘记褒奖自己",
+"我等待的审判席，是空的",
+"改变能改变的，接纳不能改变的",
+"我爱过去的你、现在的你、以及未来的你",
+"不乐观，我就没办法从昨日走到明天——那就乐观",
+"错了就立正挨打，改正就好，不必加刑",
+"世界上只有一种自我救赎：看清自己的缺失之后，仍然热爱自己",
+"你是离你自己最近的一位众生，请向自己布施",
+"迟一些、少一点，不是完全没有"]},
+{id:"lost",name:"迷茫 · 不知道往哪走",sub:"方向、选择、未来",actions:[
+"把担心的事全部列出来，逐条问：那又怎样",
+"写四行：我最想搞清楚的问题 / 我的直觉 / 有意思的是 / 我不想写的是",
+"和信任的人约一次聊天",
+"去一个开阔的地方：公园、高处、水边",
+"翻自己的旧日记，找当时的线索",
+"自由书写十分钟「我想成为的人」，不评判",
+"把眼前能做的一件小事先做掉",
+"列三样东西：我要的、我怕的、我已经有的",
+"去图书馆八楼，坐到你原来的位置上"],
+quotes:[
+"莫愁千里路，自有到来风",
+"只要你往前走，它总是给你路",
+"与其临渊羡鱼，不如退而结网",
+"未来决定现在，而不是现在决定未来",
+"命运的剧本或许写好了，但演绎还等着我补充",
+"所有的不安、踌躇、彷徨，都在指引我面对真相",
+"人生在于体验，而不是竞赛",
+"不要想理想自我是什么——现在的我，就是唯一的我",
+"停滞才痛苦。哪怕动荡中的开始，也是往前走"]},
+{id:"lonely",name:"孤独 · 想被陪着",sub:"需要人",actions:[
+"给朋友发条消息，不用有事，就发",
+"约一个人吃饭或散步",
+"去人多的咖啡馆坐着，借一点人间烟火",
+"主动开口求助一件小事",
+"翻相册，给想念的人发一张旧照片",
+"做一件善事：喂鸟、捐款、捡一次垃圾",
+"给恩人名单上的某个人写一句谢谢",
+"听一首熟悉的歌，然后给熟人打个电话",
+"去操场或公园，坐在有人的地方看一会儿"],
+quotes:[
+"朋友就是相互亏欠",
+"不是只有完全的信任才能倾诉——诉说本身也是一种办法",
+"世界接住你的次数，比你账本上记的多",
+"我的手捧着鸟粮，鸟儿就会飞来",
+"人与人成为家人是偶然，相遇本身就是礼物",
+"你从来不是一个人在扛",
+"慧慧说：我从来不担心你，我认为你什么事都做得到"]},
+{id:"angry",name:"烦躁 · 有火",sub:"怒气、被搅乱",actions:[
+"先问一句：这是我的怒火，还是别人情绪的投影",
+"出门暴走一圈，走到微微出汗",
+"释放法：这情绪背后，是想要控制，还是想要认同",
+"做一组运动：扎马步、快走、跳绳，任选",
+"抄一页经，刻意写慢",
+"把在气的事一句一句写下来，写完再评判",
+"喝一杯酽茶，等身体先降下来",
+"离开让你烦的场域，哪怕只是换个房间"],
+quotes:[
+"有情绪是好事——激动愤懑，也比心如死水强",
+"不要随便上纲上线，做无谓的审判",
+"不要回应焦虑",
+"是执着的心，带来了炼狱",
+"于是，我摊开手，允许一切发生",
+"怒气是最贵的消费，别买",
+"心无恙，则事可解"]},
+{id:"stuck",name:"动不了 · 拖延中",sub:"知道该做，就是不动",actions:[
+"把要用的工具放在最显眼的地方，趁大脑没反应过来就开工",
+"先写 200 字垃圾——允许差到离谱",
+"立刻换场地：离开床和宿舍，去图书馆或咖啡馆",
+"设一个 25 分钟闹钟，只做这一小段",
+"先做最要紧的那一件，其他的让它等",
+"给朋友发一句「我要去做了」，借一个外部锚点",
+"把手机放到另一个房间",
+"问：如果最后关头我能做完，那我现在就能开始",
+"扮演一个行动力很强的人——先装一下",
+"只解决眼前的卡点，别管全貌"],
+quotes:[
+"再漫不经心的开始，也是开始",
+"我如果最后关头能写出来，现在就能写出来",
+"不要在幻想的练武场里空比招式",
+"做了再说",
+"学习不做心理建设——直接开始",
+"一直做计划，执行力就会下降。所以，现在",
+"把「必须做到」转成「允许不做到」",
+"不要回首过去犯一样的错误，要展望未来犯新的错误",
+"你只管盯着目标，而不是想怎么摆弄四肢",
+"先写 200 字"]},
+{id:"sleep",name:"睡不着 · 该休息了",sub:"夜晚的焦虑",actions:[
+"把手机放到客厅，或伸手够不到的地方",
+"还阳卧，配合缓慢的腹式呼吸",
+"闭眼、调整呼吸、放空脑袋——你做到过，那一次很成功",
+"听一段熟悉的音声或白噪音",
+"释放一下：今天最强烈的情绪是什么？能放掉吗",
+"默念：我是安全的，我是安全的",
+"想一件今天值得感恩的小事",
+"允许自己只是躺着——睡不着，也算休息",
+"如果过了很久还睡不着，起来抄一页经，困了再躺下"],
+quotes:[
+"我是安全的",
+"真实的，永远只是每一个当下",
+"不要用白天的事，惩罚夜晚的自己",
+"睡眠是重置，不是考核",
+"今夜的任务只有一个：躺下",
+"明天的我，会替今天的我收拾好一切",
+"今天的账，结了",
+"不睡觉不是罪。睡吧"]},
+{id:"void",name:"空 · 想做点什么",sub:"愿望清单抽一张",actions:[
+"学游泳：查一次最近的游泳馆和体验课",
+"学架子鼓：找一节体验课",
+"拿出平板，画十分钟画",
+"抄一页《金刚经》，慢慢写",
+"读一首诗，抄下来",
+"出门拍三张今天的光",
+"给植物换盆，或下单香雪兰的种球",
+"听一小时英语听力，或打开多邻国",
+"查一下护照 / 签证的办理流程",
+"做一页旅行攻略：五台山、洛阳、济州岛、西安、大同——任选一个",
+"写一篇影评：《ALL I WANNA DO》或《爱的最后愿望》",
+"仿照《给阿嫲的情书》的书评，写一段自己的",
+"写《星星和印第安人的土地》的读书笔记",
+"整理这几天的日记",
+"捐一次款，或整理一包旧书捐出去",
+"教爸爸做八段锦",
+"在恩人名单上，写一个新名字",
+"读一页《我们赖以生存的隐喻》",
+"看一集《大秦帝国之纵横》",
+"研究一个 AI 的新玩法",
+"护肤、剪指甲，认真收拾一次自己",
+"买一束花，送给自己",
+"写那个你想写的小说的开头——200 字就够",
+"搭一次积木或拼图，纯玩",
+"去听一场音乐会：查查最近的场次"],
+quotes:[
+"朝闻道，夕死可矣——去做吧",
+"我的天真梦想，时至今日依然纯粹地闪耀着",
+"永恒的好奇，指向无穷",
+"只要我想做，就先别急着否定自己",
+"把自己的一天，当作一场浪漫的冒险",
+"世界是开放地图，没有什么地方是我不能去的",
+"不生长，就辜负了春天的美意",
+"纵人生行路多艰，也总有风景在前",
+"在最好的年纪，我对生活有的是手段和力气",
+"趁现在，什么都来得及",
+"坐等春消息，不如自造春消息"]}
+],
+fun:{
+name:"找点乐子",sub:"书、出门、屏幕、创造",
+subs:[
+{id:"read",name:"看点书",actions:[
+"读一页《我们赖以生存的隐喻》",
+"翻开《海妖与圣人》，读一小节",
+"读《成为观音》，看看那些女性佛教徒的故事",
+"找一本田晓菲的书读几页",
+"读一首诗，抄下来",
+"接着读《佩德罗·巴拉莫》",
+"看一集《大秦帝国之纵横》的原著章节",
+"重读一段《一生一世江南老》——你的安全岛",
+"翻几页《愤怒的葡萄》",
+"读《百年虚云》一小段",
+"翻一本纸质杂志，像中学时在杂志店那样",
+"在晋江淘一本「完本」小说，不追连载",
+"看《社会学漫画书》，轻松一点",
+"读《星星和印第安人的土地》任意一页"]},
+{id:"out",name:"出去玩",actions:[
+"去紫竹院散步，看看鸟和鸳鸯",
+"找一家没去过的咖啡馆，带着本子去",
+"买一袋鸟粮，去公园喂鸟",
+"逛胡同，来一次 citywalk",
+"去北海或颐和园看花",
+"去雍和宫拜拜，走时看看天",
+"爬一次小山，出出汗",
+"逛一个博物馆或展览",
+"坐公交随便到一站，下车走一走",
+"买一束花带回去",
+"傍晚出门，专门去看一次夕阳",
+"去一座寺庙里慢慢走一圈",
+"去水边走一走：湖边、河边都行",
+"逛街试香水，试到喜欢的那一支"]},
+{id:"screen",name:"电子榨菜",actions:[
+"看一集收藏夹里的好剧（只看一集）",
+"看一个旅行 UP 主的视频，跟着去一趟远方",
+"看一个知识区的视频，给脑子浇浇水",
+"看一部电影——有结局的那种",
+"看一集轻松的综艺",
+"听一期播客",
+"看一场音乐现场的视频",
+"翻 CP 超话——定时二十分钟，到点就撤",
+"看一段花滑或比赛的精彩片段",
+"看一个高质量的访谈"]},
+{id:"make",name:"创作",actions:[
+"写 200 字小说——那个只有你知道的故事",
+"写一篇影评，哪怕只有三段",
+"把今天看到的一件小事写成观察笔记",
+"拿出平板画十分钟画",
+"出门或在家拍三张照片",
+"仿照喜欢的书评，写一段自己的",
+"整理这几天的日记",
+"抄一页经，顺便静一静",
+"写一篇《蒙自观察笔记》",
+"做一页旅行手账",
+"给某个朋友写一封不寄出的信",
+"把脑子里盘旋的那件事写成大纲"]}
+],
+quotes:[
+"人就活那么几个瞬间——去制造一个",
+"把自己的一天，当作一场浪漫的冒险",
+"高兴，才是做事最大的 BUFF",
+"真正的快乐，才能滋养出真正的生命力",
+"世界是开放地图，没有什么地方是我不能去的",
+"在最好的年纪，我对生活有的是手段和力气",
+"玩要玩透，休息要休息透",
+"不为功利、不带遗憾、兴起地读，实在太妙了",
+"去世界里滚一滚，而不是在幻想里比招式",
+"坐拥一整个金色的、璀璨的秋天",
+"生活是自己的，快乐也是",
+"做点无聊又有趣的小事，这是给灵魂的按摩"
+]}
+};
+
+/* ================= 存取 ================= */
+const LS_KEY="garden_data_v2";
+let DB;
+function loadDB(){
+  try{const raw=localStorage.getItem(LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&d.states&&d.fun)return d;}}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function saveDB(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
+DB=loadDB();
+
+/* ================= 工具 ================= */
+const $=id=>document.getElementById(id);
+const SCREENS=["home","funhome","draw","edit"];
+function go(name){
+  SCREENS.forEach(s=>$(s).classList.toggle("hidden",s!==name));
+  window.scrollTo(0,0);
+}
+function toast(msg){
+  const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove("show"),1600);
+}
+function pad(n){return String(n).padStart(2,"0");}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function uid(){return "s"+Date.now().toString(36)+Math.floor(Math.random()*999);}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+
+const LEAF='<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 22V8M13 12c-4.5 0-8-2.5-9-7 4.5 0 8 2.5 9 7Zm0-3c4.5 0 8-2.5 9-7-4.5 0-8 2.5-9 7Z" stroke-linejoin="round"/></svg>';
+const GLYPHS={
+anxiety:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><path d="M13 3v20M13 8c-4 0-7-2-8-6 4 0 7 2 8 6Zm0 6c4 0 7-2 8-6-4 0-7 2-8 6Z"/></svg>',
+tired:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><path d="M4 14c3-5 6-8 9-8s6 3 9 8M7 20h12" stroke-linecap="round"/></svg>',
+empty:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><circle cx="13" cy="13" r="8"/><path d="M13 9v8M9 13h8" stroke-linecap="round" opacity=".5"/></svg>',
+guilt:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><path d="M6 15c0-5 3-9 7-9s7 4 7 9M9 19h8" stroke-linecap="round"/><circle cx="13" cy="13" r="1.4" fill="#064013"/></svg>',
+lost:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><circle cx="13" cy="13" r="9"/><path d="M16 10l-2 4-4 2 2-4 4-2Z" stroke-linejoin="round"/></svg>',
+lonely:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><path d="M13 21s-8-4.5-8-10a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 5.5-8 10-8 10Z" stroke-linejoin="round"/></svg>',
+angry:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><path d="M13 3c1 5 6 7 6 12a6 6 0 1 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3-1-3 0-6 0-8Z" stroke-linejoin="round"/></svg>',
+stuck:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><circle cx="13" cy="13" r="9"/><path d="M13 8v5l3 3" stroke-linecap="round"/></svg>',
+sleep:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#064013" stroke-width="1.5"><path d="M20 15.5A8.5 8.5 0 0 1 10.5 6 8.5 8.5 0 1 0 20 15.5Z" stroke-linejoin="round"/><path d="M17 4l3 3M20 4l-3 3" stroke-linecap="round" opacity=".6"/></svg>',
+fun:'<svg class="glyph" viewBox="0 0 26 26" fill="none" stroke="#efebce" stroke-width="1.5"><circle cx="13" cy="13" r="9"/><path d="M9 14.5c1.2 1.8 2.6 2.5 4 2.5s2.8-.7 4-2.5" stroke-linecap="round"/><circle cx="10" cy="10.5" r="1" fill="#efebce"/><circle cx="16" cy="10.5" r="1" fill="#efebce"/></svg>'
+};
+function glyphOf(id){return GLYPHS[id]||LEAF;}
+
+/* ================= 面板 ================= */
+function renderHome(){
+  const grid=$("stateGrid");grid.innerHTML="";
+  DB.states.forEach(st=>{
+    const btn=document.createElement("button");
+    btn.className="state";
+    btn.innerHTML=glyphOf(st.id)+`<span class="name">${esc(st.name.split(" · ")[0])}</span><span class="sub">${esc(st.name.includes(" · ")?st.name.split(" · ")[1]+"｜":"")}${esc(st.sub)}</span>`;
+    btn.onclick=()=>openDraw({type:"state",id:st.id});
+    grid.appendChild(btn);
+  });
+  const fun=document.createElement("button");
+  fun.className="state is-fun";
+  fun.innerHTML=GLYPHS.fun+`<span class="name">${esc(DB.fun.name)}</span><span class="sub">${esc(DB.fun.sub)}</span>`;
+  fun.onclick=()=>{renderFun();go("funhome");};
+  grid.appendChild(fun);
+}
+
+/* ================= 找点乐子 ================= */
+function renderFun(){
+  const grid=$("funGrid");grid.innerHTML="";
+  DB.fun.subs.forEach(sub=>{
+    const btn=document.createElement("button");
+    btn.className="state";
+    btn.innerHTML=LEAF.replace("currentColor","#064013")+`<span class="name">${esc(sub.name)}</span><span class="sub">共 ${sub.actions.length} 张</span>`;
+    btn.onclick=()=>openDraw({type:"fun",id:sub.id});
+    grid.appendChild(btn);
+  });
+}
+
+/* ================= 抽卡 ================= */
+let cur=null, bags={action:[],quote:[]};
+function getPool(){
+  if(cur.type==="state"){
+    const st=DB.states.find(s=>s.id===cur.id);
+    return {name:st.name,sub:st.sub,actions:st.actions,quotes:st.quotes,from:"— 来自你的花园 —"};
+  }
+  const sub=DB.fun.subs.find(s=>s.id===cur.id);
+  return {name:DB.fun.name+" · "+sub.name,sub:sub.name,actions:sub.actions,quotes:DB.fun.quotes,from:"— 找点乐子 —"};
+}
+function openDraw(c){
+  cur=c;bags={action:[],quote:[]};
+  const p=getPool();
+  $("stateName").textContent=p.name;
+  $("stateSub").textContent=p.sub||"";
+  $("nowLabel").textContent=c.type==="fun"?"找 点 乐 子":"当前状态";
+  $("crumb").textContent="心的花园 · 抽卡";
+  ["action","quote"].forEach(k=>{$(k+"Card").classList.remove("flipped");$(k+"Text").textContent="";$(k+"No").textContent="";});
+  $("actionFrom").textContent=p.from; $("quoteFrom").textContent=p.from;
+  $("actionHint").textContent="轻点卡牌，抽一件现在就能做的事";
+  $("quoteHint").textContent="做完那件事之前或之后，抽一句话";
+  $("backBtn").textContent=c.type==="fun"?"← 换个乐子":"← 换个状态";
+  go("draw");
+}
+$("backBtn").onclick=()=>{ if(cur&&cur.type==="fun"){renderFun();go("funhome");} else go("home"); };
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ if(b.dataset.go==="home"){renderHome();} go(b.dataset.go); });
+
+function drawOne(kind){
+  if(!cur)return;
+  const pool=getPool()[kind==="action"?"actions":"quotes"];
+  if(pool.length===0){toast("这一叠是空的，先去编辑页添几张吧");return;}
+  const card=$(kind+"Card"),text=$(kind+"Text"),no=$(kind+"No"),hint=$(kind+"Hint");
+  if(bags[kind].length===0)bags[kind]=shuffle(pool.map((_,i)=>i));
+  const idx=bags[kind].pop();
+  const apply=()=>{text.textContent=pool[idx];no.textContent="№ "+pad(idx+1);};
+  if(card.classList.contains("flipped")){
+    card.classList.remove("flipped");
+    setTimeout(()=>{apply();card.classList.add("flipped");},420);
+  }else{
+    setTimeout(apply,380);card.classList.add("flipped");
+  }
+  hint.textContent=bags[kind].length>0?`卡池还剩 ${bags[kind].length} 张 · 共 ${pool.length} 张`:"这一叠抽完了，再抽重新开始";
+}
+$("actionBtn").onclick=e=>{e.stopPropagation();drawOne("action");};
+$("quoteBtn").onclick=e=>{e.stopPropagation();drawOne("quote");};
+$("actionCard").onclick=()=>drawOne("action");
+$("quoteCard").onclick=()=>drawOne("quote");
+
+/* ================= 编辑页 ================= */
+function listHTML(arr,path){
+  let h=`<div class="list-title"><span class="lt">${path==="actions"?"可以做的事":"给自己的话"}</span>
+    <span class="lc">共 ${arr.length} 条 · 自动编号　
+      <button class="lnk act-imp">导入 txt · 覆盖</button>
+      <button class="lnk act-app">导入 txt · 追加</button>
+      <button class="lnk act-exp">导出 txt</button>
+    </span></div>
+  <div class="batch-hint">txt 里一项一行，或用空格分隔；「覆盖」会用文件内容整体替换本卡池——先在 txt 里删掉不要的项再上传，即完成批量删除。</div>`;
+  arr.forEach((t,i)=>{
+    h+=`<div class="item-row" data-path="${path}" data-idx="${i}">
+      <span class="no num">№ ${pad(i+1)}</span>
+      <span class="tx">${esc(t)}</span>
+      <button class="ed">改</button><button class="del">删</button>
+      <div class="editbox"><input type="text" value="${esc(t)}"><button class="ok">存</button></div>
+    </div>`;
+  });
+  h+=`<div class="add-row"><input type="text" placeholder="添一张新卡……"><button>＋ 添 加</button></div>`;
+  return h;
+}
+
+function renderEdit(){
+  const wrap=$("editWrap");wrap.innerHTML="";
+  DB.states.forEach((st,si)=>{
+    const acc=document.createElement("div");acc.className="acc";
+    acc.innerHTML=`
+      <div class="acc-head"><span class="t">${esc(st.name)}</span><span class="cnt">事 ${st.actions.length} · 话 ${st.quotes.length}</span><span class="arr">›</span></div>
+      <div class="acc-body">
+        <div class="field"><label>状态名称（用「 · 」分隔主名与副题）</label><input type="text" class="f-name" value="${esc(st.name)}"></div>
+        <div class="field"><label>状态描述</label><input type="text" class="f-sub" value="${esc(st.sub)}"></div>
+        <div data-list="actions">${listHTML(st.actions,"actions")}</div>
+        <div data-list="quotes">${listHTML(st.quotes,"quotes")}</div>
+        <div class="edit-actions"><button class="mini-btn danger act-del-state">删 除 此 状 态</button></div>
+      </div>`;
+    acc.querySelector(".acc-head").onclick=()=>acc.classList.toggle("open");
+    acc.querySelector(".f-name").oninput=e=>{st.name=e.target.value;saveDB();acc.querySelector(".t").textContent=st.name;};
+    acc.querySelector(".f-sub").oninput=e=>{st.sub=e.target.value;saveDB();};
+    acc.querySelector(".act-del-state").onclick=()=>{
+      if(confirm(`确定删除「${st.name}」和它的全部卡片吗？`)){DB.states.splice(si,1);saveDB();renderEdit();toast("已删除");}
+    };
+    bindList(acc,st);
+    wrap.appendChild(acc);
+  });
+
+  // 找点乐子
+  const fun=DB.fun;
+  const facc=document.createElement("div");facc.className="acc";
+  let subBlocks="";
+  fun.subs.forEach((sub,i)=>{
+    subBlocks+=`<div class="sub-block" data-sub="${i}">
+      <div class="sb-head"><input type="text" class="f-subname" value="${esc(sub.name)}"><button class="mini-btn danger act-del-sub">删</button></div>
+      <div data-list="actions">${listHTML(sub.actions,"actions")}</div>
+    </div>`;
+  });
+  facc.innerHTML=`
+    <div class="acc-head"><span class="t">${esc(fun.name)}</span><span class="cnt">${fun.subs.length} 类 · 话 ${fun.quotes.length}</span><span class="arr">›</span></div>
+    <div class="acc-body">
+      <div class="field"><label>状态名称</label><input type="text" class="f-name" value="${esc(fun.name)}"></div>
+      <div class="field"><label>状态描述</label><input type="text" class="f-sub" value="${esc(fun.sub)}"></div>
+      <div id="funSubs">${subBlocks}</div>
+      <div class="add-row"><input type="text" id="newSubName" placeholder="新增一类乐子，如：听音乐……"><button id="addSubBtn">＋ 新增分类</button></div>
+      <div data-list="quotes">${listHTML(fun.quotes,"quotes")}</div>
+    </div>`;
+  facc.querySelector(".acc-head").onclick=()=>facc.classList.toggle("open");
+  facc.querySelector(".f-name").oninput=e=>{fun.name=e.target.value;saveDB();facc.querySelector(".t").textContent=fun.name;};
+  facc.querySelector(".f-sub").oninput=e=>{fun.sub=e.target.value;saveDB();};
+  facc.querySelector("#addSubBtn").onclick=()=>{
+    const inp=facc.querySelector("#newSubName"),v=inp.value.trim();
+    if(!v){toast("先写个分类名");return;}
+    fun.subs.push({id:uid(),name:v,actions:[]});saveDB();renderEdit();toast("已新增分类");
+  };
+  facc.querySelectorAll(".sub-block").forEach((blk,i)=>{
+    const sub=fun.subs[i];
+    blk.querySelector(".f-subname").oninput=e=>{sub.name=e.target.value;saveDB();};
+    blk.querySelector(".act-del-sub").onclick=()=>{
+      if(confirm(`删除「${sub.name}」这一类？`)){fun.subs.splice(i,1);saveDB();renderEdit();toast("已删除");}
+    };
+    bindList(blk,sub);
+  });
+  bindList(facc.querySelector("[data-list='quotes']"),fun,"quotes");
+  wrap.appendChild(facc);
+}
+
+/* 选一个 txt 文件，解析成条目数组后交给回调 */
+function pickTxt(cb){
+  const inp=document.createElement("input");
+  inp.type="file";inp.accept=".txt,text/plain";
+  inp.onchange=()=>{
+    const f=inp.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const raw=String(rd.result||"").replace(/\r/g,"");
+      // 有换行按行分；否则按空白（空格/制表符）分
+      let items=(raw.includes("\n")?raw.split("\n"):raw.split(/\s+/))
+        .map(s=>s.trim()).filter(Boolean);
+      if(!items.length){toast("没读到任何条目");return;}
+      cb(items);
+    };
+    rd.readAsText(f,"utf-8");
+  };
+  inp.click();
+}
+
+function bindList(rootEl,owner,only){
+  const kinds=only?[only]:["actions","quotes"];
+  kinds.forEach(kind=>{
+    const zone=rootEl.querySelector?rootEl:rootEl;
+    const blocks=(only?[zone]:[...zone.querySelectorAll(`[data-list='${kind}']`)]);
+    blocks.forEach(blk=>{
+      if(!blk)return;
+      blk.querySelectorAll(".item-row").forEach(row=>{
+        const i=+row.dataset.idx;
+        row.querySelector(".ed").onclick=()=>row.classList.add("editing");
+        row.querySelector(".ok").onclick=()=>{
+          const v=row.querySelector("input").value.trim();
+          if(v){owner[kind][i]=v;saveDB();row.querySelector(".tx").textContent=v;}
+          row.classList.remove("editing");toast("已保存");
+        };
+        row.querySelector(".del").onclick=()=>{
+          owner[kind].splice(i,1);saveDB();renderEdit();toast("已删除，编号已重排");
+        };
+      });
+      const addBtn=blk.querySelector(".add-row button"),addInp=blk.querySelector(".add-row input");
+      if(addBtn)addBtn.onclick=()=>{
+        const v=addInp.value.trim();
+        if(!v){toast("先写内容");return;}
+        owner[kind].push(v);saveDB();renderEdit();toast("已添加为 № "+pad(owner[kind].length));
+      };
+      /* —— 批量导入 / 导出 —— */
+      const impBtn=blk.querySelector(".act-imp"),appBtn=blk.querySelector(".act-app"),expBtn=blk.querySelector(".act-exp");
+      if(impBtn)impBtn.onclick=()=>pickTxt(items=>{owner[kind]=items;saveDB();renderEdit();toast(`已覆盖，共 ${items.length} 条，编号已重排`);});
+      if(appBtn)appBtn.onclick=()=>pickTxt(items=>{owner[kind]=owner[kind].concat(items);saveDB();renderEdit();toast(`已追加 ${items.length} 条`);});
+      if(expBtn)expBtn.onclick=()=>{
+        const blob=new Blob([owner[kind].join("\n")],{type:"text/plain;charset=utf-8"});
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(blob);
+        a.download=(kind==="actions"?"可以做的事":"给自己的话")+".txt";
+        a.click();URL.revokeObjectURL(a.href);
+        toast("已导出，一项一行");
+      };
+    });
+  });
+}
+
+$("addStateBtn").onclick=()=>{
+  const name=prompt("新状态的名字？（可用「 · 」分隔主名与副题，如：低落 · 提不起劲）");
+  if(!name||!name.trim())return;
+  const sub=prompt("一句话描述这个状态？（可留空）")||"";
+  DB.states.push({id:uid(),name:name.trim(),sub:sub.trim(),actions:[],quotes:[]});
+  saveDB();renderEdit();toast("新状态已建，去给它添卡吧");
+};
+$("resetBtn").onclick=()=>{
+  if(confirm("这会清空你所有的修改，恢复到最初的卡池。确定吗？")){
+    DB=JSON.parse(JSON.stringify(DEFAULT_DATA));saveDB();renderEdit();toast("已恢复初始卡池");
+  }
+};
+$("toEdit").onclick=()=>{renderEdit();go("edit");};
+
+/* ================= 全局数据导出 / 导入 ================= */
+function normalizeData(data) {
+  if (!data || typeof data !== "object") return null;
+  if (!Array.isArray(data.states)) data.states = [];
+  data.states.forEach(st => {
+    if (!st.id) st.id = uid();
+    if (!st.name) st.name = "未命名";
+    if (!st.sub) st.sub = "";
+    if (!Array.isArray(st.actions)) st.actions = [];
+    if (!Array.isArray(st.quotes)) st.quotes = [];
+  });
+  if (!data.fun || typeof data.fun !== "object") data.fun = {name:"找点乐子",sub:"",subs:[],quotes:[]};
+  if (!Array.isArray(data.fun.subs)) data.fun.subs = [];
+  data.fun.subs.forEach(sub => {
+    if (!sub.id) sub.id = uid();
+    if (!sub.name) sub.name = "未命名";
+    if (!Array.isArray(sub.actions)) sub.actions = [];
+  });
+  if (!Array.isArray(data.fun.quotes)) data.fun.quotes = [];
+  return data;
+}
+
+$("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(DB, null, 2)], {type: "application/json;charset=utf-8"});
+  const a = document.createElement("a");
+  const date = new Date().toISOString().slice(0,10);
+  a.href = URL.createObjectURL(blob);
+  a.download = `心的花园_备份_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("全部数据已导出");
+};
+
+$("importBtn").onclick = () => {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = ".json,application/json";
+  inp.onchange = () => {
+    const f = inp.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const data = JSON.parse(rd.result);
+        const normalized = normalizeData(data);
+        if (!normalized) {
+          toast("文件格式不正确");
+          return;
+        }
+        if (confirm("导入将覆盖当前所有数据，确定要继续吗？")) {
+          DB = normalized;
+          saveDB();
+          renderEdit();
+          renderHome();
+          toast("数据导入成功");
+        }
+      } catch (e) {
+        toast("无法解析文件，请确保是有效的 JSON 格式");
+      }
+    };
+    rd.readAsText(f, "utf-8");
+  };
+  inp.click();
+};
+
+/* ================= 启动 ================= */
+renderHome();
+</script>
+</body>
+</html>
