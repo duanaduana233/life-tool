@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>课程表</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="课表">
+<meta name="theme-color" content="#c026d3">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root {
+  --bg: #f5f5f7; --card: #ffffff; --text: #1a1a1a; --text2: #666; --text3: #999;
+  --border: #e0e0e0; --green: #16a34a; --red: #dc2626; --blue: #2563eb;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08); --radius: 12px;
+  --accent-schedule: #c026d3;
+  --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0a0a0a; --card: #141414; --text: #f0f0f0; --text2: #aaa; --text3: #666; --border: #222; --shadow: 0 1px 3px rgba(0,0,0,0.3); }
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); line-height:1.5; padding:12px; }
+.container { max-width:1100px; margin:0 auto; }
+header { margin-bottom:16px; }
+header h1 { font-size:20px; font-weight:600; }
+header p { font-size:13px; color:var(--text2); margin-top:2px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:10px; box-shadow:var(--shadow); }
+.card-title { font-size:15px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.card-title .dot { width:8px; height:8px; border-radius:50%; background:var(--accent-schedule); flex-shrink:0; }
+.inp { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text); font-family:inherit; font-size:15px; outline:none; width:100%; min-height:44px; }
+.inp:focus { border-color:var(--text2); }
+.inp-sm { padding:8px 10px; font-size:14px; min-height:40px; }
+.select-inp { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text); font-family:inherit; font-size:15px; outline:none; width:100%; min-height:44px; }
+.select-inp:focus { border-color:var(--text2); }
+.btn { padding:10px 16px; border:none; border-radius:8px; background:var(--text); color:var(--card); font-family:inherit; font-size:14px; cursor:pointer; transition:opacity .15s; white-space:nowrap; min-height:44px; display:flex; align-items:center; justify-content:center; }
+.btn:hover { opacity:.85; }
+.btn-sm { padding:8px 12px; font-size:13px; min-height:40px; }
+.btn-red { background:var(--red); }
+.btn-outline { padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text2); font-family:inherit; font-size:13px; cursor:pointer; transition:all .15s; min-height:40px; }
+.btn-outline:hover { border-color:var(--text2); color:var(--text); }
+.add-row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.today-mark { font-size:11px; color:var(--green); font-weight:600; margin-left:4px; }
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center; padding:16px; }
+.modal-overlay.active { display:flex; }
+.modal { background:var(--card); border-radius:16px; width:100%; max-width:500px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:modalIn .2s; }
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--card); z-index:10; border-radius:16px 16px 0 0; }
+.modal-title { font-size:17px; font-weight:600; }
+.modal-close { width:36px; height:36px; border-radius:50%; border:none; background:var(--bg); color:var(--text2); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.modal-close:hover { background:var(--border); }
+.modal-body { padding:16px 20px; }
+.modal-section { margin-bottom:16px; }
+.modal-section-title { font-size:14px; font-weight:600; color:var(--text2); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.modal-item { padding:8px 0; font-size:14px; display:flex; align-items:center; gap:8px; }
+.modal-item .status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.modal-item .status.done { background:var(--green); }
+.modal-item .status.undone { background:var(--border); }
+.modal-empty { color:var(--text3); font-size:13px; padding:8px 0; }
+@media (max-width:768px) {
+  body { padding:8px; }
+  .btn, .btn-sm, .btn-outline { min-height:48px; }
+  .inp { min-height:48px; font-size:16px; }
+}
+/* ===== 课程表 ===== */
+.tab-schedule.active { background:#c026d3; border-color:#c026d3; }
+.sched-scroll { overflow:auto; max-height:78vh; border:1px solid var(--border); border-radius:10px; }
+.sched-table { border-collapse:collapse; width:100%; table-layout:fixed; min-width:780px; }
+.sched-table th { position:sticky; top:0; background:var(--card); z-index:5; border-bottom:1px solid var(--border); padding:6px 4px; font-size:13px; }
+.sched-col-time { width:52px; }
+.sched-label-col { position:relative; }
+.sched-hour-label { position:absolute; right:6px; transform:translateY(-50%); font-size:10px; color:var(--text3); white-space:nowrap; }
+.sched-day-col { vertical-align:top; padding:0 !important; border-left:1px solid var(--border); position:relative; }
+.sched-label-col { border-left:none; }
+.sched-course { border-radius:6px; margin:1px; padding:4px 6px; color:#fff; cursor:pointer; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.18); display:flex; flex-direction:column; }
+.sched-course:hover { filter:brightness(1.08); }
+.sched-course-name { font-size:12px; font-weight:600; line-height:1.2; }
+.sched-course-info { font-size:9px; opacity:0.88; margin-top:2px; }
+.sched-free { margin:1px; border-radius:6px; cursor:pointer; overflow:hidden; padding:2px 4px; font-size:10px; color:var(--text2); border:1px dashed var(--border); }
+.sched-free:hover { border-color:var(--text3); }
+.pat-dots { background-color:var(--card); background-image:radial-gradient(circle, var(--border) 1.1px, transparent 1.1px); background-size:11px 11px; }
+.pat-stripes { background-color:var(--card); background-image:repeating-linear-gradient(45deg, transparent 0 7px, rgba(127,127,127,0.12) 7px 14px); }
+.sched-item { display:flex; align-items:center; gap:3px; line-height:1.35; margin-top:1px; }
+.sched-item .si-check { width:11px; height:11px; border:1.5px solid var(--text3); border-radius:3px; flex-shrink:0; cursor:pointer; }
+.sched-item.done .si-check { background:var(--green); border-color:var(--green); }
+.sched-item.done .si-text { text-decoration:line-through; color:var(--text3); }
+.si-text { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.si-del { cursor:pointer; color:var(--text3); padding:0 2px; flex-shrink:0; }
+.si-del:hover { color:var(--red); }
+.color-swatches { display:flex; gap:6px; flex-wrap:wrap; }
+.color-swatch { width:24px; height:24px; border-radius:6px; cursor:pointer; border:2px solid transparent; }
+.color-swatch.sel { border-color:var(--text); }
+.sched-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text2); margin-bottom:10px; align-items:center; }
+.sched-legend .lg { width:16px; height:16px; border-radius:4px; display:inline-block; vertical-align:-3px; margin-right:4px; border:1px dashed var(--border); }
+/* 工作日休息时段（12:15-14:00 / 18:15-19:00）淡色高亮 */
+.rest-tint { background-color:rgba(217,119,6,0.10) !important; }
+/* 早/中/晚分界加粗框线 */
+.sched-divider { position:absolute; left:0; right:0; height:2px; background:var(--text); opacity:0.22; pointer-events:none; z-index:2; }
+/* 手机端适配 */
+@media (max-width:768px) {
+  .sched-table { min-width:640px; }
+  .sched-scroll { max-height:72vh; -webkit-overflow-scrolling:touch; }
+  .sched-course-name { font-size:11px; }
+  .sched-course-info { font-size:8px; }
+  .sched-free { font-size:9px; padding:1px 3px; }
+  .sched-hour-label { font-size:9px; right:3px; }
+  .sched-legend { font-size:11px; gap:8px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <h1>课程表</h1>
+        <p>与「人生看板」数据互通 · 空余/课余时间可添加待办与事件</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-outline" onclick="exportData()">💾 导出数据</button>
+        <button class="btn btn-sm btn-outline" onclick="importData()">📂 导入数据</button>
+      </div>
+    </div>
+  </header>
+  <!-- ===== 课程表 ===== -->
+  <div class="panel" id="panel-schedule">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-schedule)"></span>课程表
+        <span id="sched-week-label" style="font-size:12px;color:var(--text3);font-weight:400;margin-left:auto"></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <button class="btn btn-sm btn-outline" onclick="schedNav(-1)">‹ 上一周</button>
+        <button class="btn btn-sm btn-outline" onclick="schedNav(0)">回到本周</button>
+        <button class="btn btn-sm btn-outline" onclick="schedNav(1)">下一周 ›</button>
+        <span style="font-size:13px;color:var(--text2)">学期开始(周一):</span>
+        <input type="date" class="inp inp-sm" id="sched-sem-start" style="width:150px" onchange="saveSemStart(this.value)">
+      </div>
+      <div class="sched-legend">
+        <span><span class="lg pat-stripes"></span>课余时间（上课日 8:00-21:25 空档）</span>
+        <span><span class="lg pat-dots"></span>空余时间（点按添加待办/事件）</span>
+        <span>📌 特殊事件 · 待办可勾选 · 点击课程色块可编辑</span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">添加课程</div>
+        <div class="add-row" style="flex-wrap:wrap">
+          <input class="inp" id="sc-name" placeholder="课程名称" style="flex:1;min-width:120px">
+          <input class="inp" id="sc-room" placeholder="教室（可选）" style="width:100px">
+          <select class="select-inp" id="sc-day" style="width:88px;min-height:44px">
+            <option value="0">周一</option><option value="1">周二</option><option value="2">周三</option>
+            <option value="3">周四</option><option value="4">周五</option>
+          </select>
+          <select class="select-inp" id="sc-period" style="width:140px;min-height:44px">
+            <option value="1">第1节 08:00</option><option value="2">第2节 08:50</option>
+            <option value="3">第3节 09:50</option><option value="4">第4节 10:40</option>
+            <option value="5">第5节 11:30</option><option value="6">第6节 14:00</option>
+            <option value="7">第7节 14:50</option><option value="8">第8节 15:50</option>
+            <option value="9">第9节 16:40</option><option value="10">第10节 17:30</option>
+            <option value="11">第11节 19:00</option><option value="12">第12节 19:50</option>
+            <option value="13">第13节 20:40</option>
+          </select>
+          <select class="select-inp" id="sc-length" style="width:110px;min-height:44px">
+            <option value="2" selected>连上2节</option><option value="3">连上3节</option>
+            <option value="1">1节</option><option value="4">连上4节</option>
+          </select>
+          <input class="inp" id="sc-wstart" type="number" min="1" placeholder="开始周" style="width:78px">
+          <input class="inp" id="sc-wend" type="number" min="1" placeholder="结束周" style="width:78px">
+          <div class="color-swatches" id="sched-colors" style="align-items:center"></div>
+          <button class="btn btn-sm" onclick="addCourse()">添加课程</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">早5节：1节8:00 / 3节9:50（每节45分，课间5分，2-3节间15分）· 下午5节：1节14:00 / 3节15:50 · 晚3节：19:00起 · 表内时间 7:00-24:00</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-schedule)"></span>周课表</div>
+      <div class="sched-scroll">
+        <table class="sched-table">
+          <thead id="sched-head"></thead>
+          <tbody id="sched-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">历史记录</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'life-board-v8';
+let DATA = { schedule: { courses: [], items: {}, semesterStart: '2026-09-07' } };
+
+function load() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const p = JSON.parse(s);
+      if (!p.schedule) p.schedule = { courses: [], items: {}, semesterStart: '2026-09-07' };
+      DATA.schedule = p.schedule;
+    }
+  } catch(e){}
+}
+function save() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    const full = s ? JSON.parse(s) : {};
+    full.schedule = DATA.schedule;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
+  } catch(e){}
+}
+function exportData() {
+  const data = localStorage.getItem(STORAGE_KEY);
+  if (!data) return alert('暂无数据可导出');
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'schedule-backup-' + today() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = event => {
+      try {
+        const p = JSON.parse(event.target.result);
+        if (!p.schedule) p.schedule = { courses: [], items: {}, semesterStart: '2026-09-07' };
+        const s = localStorage.getItem(STORAGE_KEY);
+        const full = s ? JSON.parse(s) : {};
+        full.schedule = p.schedule;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
+        alert('导入成功，页面即将刷新');
+        location.reload();
+      } catch (err) { alert('文件格式错误，导入失败'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function thisWeek() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d.setDate(diff));
+  return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+}
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+let lastDate = today();
+setInterval(() => {
+  const current = today();
+  if (current !== lastDate) { lastDate = current; renderSchedule(); }
+}, 30000);
+
+// ===================== SCHEDULE (课程表) =====================
+const SCHED_PX = 0.75; // 每分钟像素高
+const PERIODS = [
+  {n:1,t:480},{n:2,t:530},{n:3,t:590},{n:4,t:640},{n:5,t:690},
+  {n:6,t:840},{n:7,t:890},{n:8,t:950},{n:9,t:1000},{n:10,t:1050},
+  {n:11,t:1140},{n:12,t:1190},{n:13,t:1240}
+]; // 每节45分，课间5分，2-3节间15分：3节9:50 / 8节15:50 符合校时
+const SCHED_COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63','#795548','#607d8b'];
+let schedOffset = 0;
+let selectedColor = SCHED_COLORS[5];
+
+function addDaysStr(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function mondayOfStr(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function schedMonday() { return addDaysStr(thisWeek(), schedOffset * 7); }
+function schedWeekNum() {
+  const startMon = mondayOfStr(DATA.schedule.semesterStart || '2026-09-07');
+  const diffDays = Math.round((new Date(schedMonday()+'T00:00:00') - new Date(startMon+'T00:00:00')) / 86400000);
+  return Math.floor(diffDays / 7) + 1;
+}
+function schedNav(dir) { if (dir === 0) schedOffset = 0; else schedOffset += dir; renderSchedule(); }
+function saveSemStart(v) { DATA.schedule.semesterStart = v; save(); renderSchedule(); }
+function minToText(m) { return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); }
+
+function getSchedItems(day, startMin) { return DATA.schedule.items[day + '|' + startMin] || []; }
+function setSchedItems(day, startMin, arr) {
+  const k = day + '|' + startMin;
+  if (arr.length === 0) delete DATA.schedule.items[k]; else DATA.schedule.items[k] = arr;
+}
+function itemsHtml(day, startMin) {
+  return getSchedItems(day, startMin).map((it, i) =>
+    `<div class="sched-item ${it.done?'done':''}">
+      ${it.type==='todo' ? `<div class="si-check" onclick="event.stopPropagation();toggleSchedItem(${day},${startMin},${i})"></div>` : '<span style="flex-shrink:0">📌</span>'}
+      <span class="si-text" title="${escapeHtml(it.text)}">${escapeHtml(it.text)}</span>
+      <span class="si-del" onclick="event.stopPropagation();deleteSchedItem(${day},${startMin},${i})">×</span>
+    </div>`).join('');
+}
+
+function renderSchedule() {
+  const weekNum = schedWeekNum();
+  const mon = schedMonday();
+  const semEl = document.getElementById('sched-sem-start');
+  if (semEl) semEl.value = DATA.schedule.semesterStart || '2026-09-07';
+  document.getElementById('sched-week-label').textContent =
+    (schedOffset === 0 ? '【本周】 ' : '') + `第 ${weekNum} 周 · ${mon} ~ ${addDaysStr(mon,6)}`;
+
+  const dayNames = ['周一','周二','周三','周四','周五','周六','周日'];
+  const td = today();
+  document.getElementById('sched-head').innerHTML = '<tr><th class="sched-col-time">时间</th>' +
+    dayNames.map((n, d) => {
+      const isToday = addDaysStr(mon, d) === td;
+      return `<th style="${isToday?'color:#c026d3':''}">${n}${isToday?'<span class="today-mark">·今</span>':''}</th>`;
+    }).join('') + '</tr>';
+
+  const colH = (1440 - 420) * SCHED_PX; // 7:00-24:00
+  // 纵坐标：起始7:00、24:00，21:25后按整点(22:00/23:00)，其余按各节课开始时间标注
+  const labelTimes = [420].concat(PERIODS.map(p => p.t)).concat([1320, 1380, 1440]);
+  let labels = '';
+  labelTimes.forEach(m => {
+    labels += `<div class="sched-hour-label" style="top:${(m-420)*SCHED_PX}px">${minToText(m)}</div>`;
+  });
+  let body = `<tr><td class="sched-label-col" style="height:${colH}px">${labels}</td>`;
+  for (let d = 0; d < 7; d++) {
+    body += `<td class="sched-day-col" style="height:${colH}px">${d < 5 ? buildDayCol(d, weekNum) : buildWeekendCol(d)}</td>`;
+  }
+  body += '</tr>';
+  document.getElementById('sched-body').innerHTML = body;
+  renderSwatches();
+}
+
+function buildDayCol(d, weekNum) {
+  const courses = DATA.schedule.courses
+    .filter(c => c.day === d && weekNum >= c.startWeek && weekNum <= c.endWeek)
+    .sort((a, b) => a.startPeriod - b.startPeriod);
+  const hasCourses = courses.length > 0;
+  let t = 420, html = '';
+  for (const c of courses) {
+    const st = PERIODS[c.startPeriod - 1].t;
+    const en = st + 45 * c.periods;
+    if (t < st) html += freeSegHtml(d, t, st, hasCourses);
+    html += `<div class="sched-course" style="height:${(en-st)*SCHED_PX - 2}px;background:${c.color}" onclick="openCourseModal('${c.id}')">
+      <div class="sched-course-name">${escapeHtml(c.name)}</div>
+      <div class="sched-course-info">第${c.startPeriod}-${c.startPeriod + c.periods - 1}节 · ${c.startWeek}-${c.endWeek}周${c.room ? ' · 📍' + escapeHtml(c.room) : ''}</div>
+    </div>`;
+    t = en;
+  }
+  if (t < 1440) html += freeSegHtml(d, t, 1440, hasCourses);
+  // 早/中/晚分界加粗线：12:15、14:00、18:15、19:00
+  html += [735, 840, 1095, 1140].map(m =>
+    `<div class="sched-divider" style="top:${(m-420)*SCHED_PX - 1}px"></div>`).join('');
+  return html;
+}
+
+const REST_PERIODS = [[735, 840], [1095, 1140]]; // 12:15-14:00 午休 · 18:15-19:00 晚饭后
+function freeSegHtml(d, t, en, hasCourses) {
+  // 先按休息时段拆分子段
+  let segs = [{t, en, rest: false}];
+  REST_PERIODS.forEach(([rs, re]) => {
+    const next = [];
+    segs.forEach(s => {
+      if (re <= s.t || rs >= s.en) { next.push(s); return; }
+      if (rs > s.t) next.push({t: s.t, en: rs, rest: s.rest});
+      next.push({t: Math.max(rs, s.t), en: Math.min(re, s.en), rest: true});
+      if (re < s.en) next.push({t: re, en: s.en, rest: s.rest});
+    });
+    segs = next;
+  });
+  return segs.map(s => oneFreeSeg(d, s.t, s.en, hasCourses, s.rest)).join('');
+}
+function oneFreeSeg(d, t, en, hasCourses, rest) {
+  // 上课日 8:00-21:25 之间的空档=课余时间(条纹)；其余=空余时间(波点)；休息时段叠加淡色
+  const isBreak = hasCourses && t >= 480 && t < 1285 && en > 480;
+  const cls = (isBreak ? 'pat-stripes' : 'pat-dots') + (rest ? ' rest-tint' : '');
+  return `<div class="sched-free ${cls}" style="height:${(en-t)*SCHED_PX - 2}px" title="${minToText(t)}-${minToText(en)}${rest?' · 休息时段':''} 点击添加待办/事件" onclick="openSlotModal(${d},${t},${en})">
+    ${itemsHtml(d, t)}
+  </div>`;
+}
+
+function buildWeekendCol(d) {
+  let html = '';
+  for (let h = 7; h < 24; h++) { // 周末每小时一个格子
+    const t = h * 60;
+    html += `<div class="sched-free pat-dots" style="height:${60*SCHED_PX - 2}px" title="${minToText(t)}-${minToText(t+60)} 点击添加待办/事件" onclick="openSlotModal(${d},${t},${t+60})">
+      <div style="font-size:9px;color:var(--text3)">${minToText(t)}</div>
+      ${itemsHtml(d, t)}
+    </div>`;
+  }
+  return html;
+}
+
+// ---- 课程增删改 ----
+function renderSwatches() {
+  const el = document.getElementById('sched-colors');
+  if (!el) return;
+  el.innerHTML = SCHED_COLORS.map(c =>
+    `<div class="color-swatch ${c===selectedColor?'sel':''}" style="background:${c}" onclick="selectSchedColor('${c}')"></div>`).join('');
+}
+function selectSchedColor(c) { selectedColor = c; renderSwatches(); }
+
+function addCourse() {
+  const name = document.getElementById('sc-name').value.trim();
+  const day = parseInt(document.getElementById('sc-day').value);
+  const startPeriod = parseInt(document.getElementById('sc-period').value);
+  const periods = parseInt(document.getElementById('sc-length').value);
+  const startWeek = parseInt(document.getElementById('sc-wstart').value) || 1;
+  const endWeek = parseInt(document.getElementById('sc-wend').value) || 16;
+  if (!name) return alert('请填写课程名称');
+  if (startWeek > endWeek) return alert('开始周不能大于结束周');
+  const room = document.getElementById('sc-room').value.trim();
+  DATA.schedule.courses.push({id: Date.now() + Math.random(), name, room, day, startPeriod, periods, startWeek, endWeek, color: selectedColor});
+  document.getElementById('sc-name').value = '';
+  document.getElementById('sc-room').value = '';
+  save(); renderSchedule();
+}
+
+let editingCourseId = null;
+let modalCourseColor = null;
+function openCourseModal(id) {
+  editingCourseId = id;
+  modalCourseColor = null;
+  const c = DATA.schedule.courses.find(x => String(x.id) === String(id));
+  if (!c) { alert('未找到该课程'); return; }
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="inp" id="ec-name" value="${escapeHtml(c.name)}" placeholder="课程名称">
+      <input class="inp" id="ec-room" value="${c.room ? escapeHtml(c.room) : ''}" placeholder="教室（可选）">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select class="select-inp" id="ec-day" style="flex:1;min-width:80px">
+          ${['周一','周二','周三','周四','周五'].map((n,i)=>`<option value="${i}" ${c.day===i?'selected':''}>${n}</option>`).join('')}
+        </select>
+        <select class="select-inp" id="ec-period" style="flex:1;min-width:110px">
+          ${PERIODS.map(p=>`<option value="${p.n}" ${c.startPeriod===p.n?'selected':''}>第${p.n}节 (${minToText(p.t)})</option>`).join('')}
+        </select>
+        <select class="select-inp" id="ec-length" style="flex:1;min-width:90px">
+          <option value="1" ${c.periods===1?'selected':''}>1节 (45分)</option>
+          <option value="2" ${c.periods===2?'selected':''}>2节 (90分)</option>
+          <option value="3" ${c.periods===3?'selected':''}>3节 (135分)</option>
+          <option value="4" ${c.periods===4?'selected':''}>4节 (180分)</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="ec-wstart" type="number" min="1" value="${c.startWeek}" placeholder="开始周" style="flex:1">
+        <input class="inp" id="ec-wend" type="number" min="1" value="${c.endWeek}" placeholder="结束周" style="flex:1">
+      </div>
+      <div class="color-swatches" id="ec-colors">
+        ${SCHED_COLORS.map(col=>`<div class="color-swatch ${col===c.color?'sel':''}" style="background:${col}" onclick="pickCourseColor('${col}',this)"></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1" onclick="saveCourseEdit()">保存</button>
+        <button class="btn btn-red" style="flex:1" onclick="deleteCourseEdit()">删除课程</button>
+      </div>
+    </div>`;
+  openModal('编辑课程', html);
+}
+function pickCourseColor(c, el) {
+  modalCourseColor = c;
+  document.querySelectorAll('#ec-colors .color-swatch').forEach(s => s.classList.remove('sel'));
+  if (el) el.classList.add('sel');
+}
+function saveCourseEdit() {
+  const c = DATA.schedule.courses.find(x => String(x.id) === String(editingCourseId));
+  if (!c) return;
+  const name = document.getElementById('ec-name').value.trim();
+  if (!name) return;
+  c.name = name;
+  c.room = document.getElementById('ec-room').value.trim();
+  c.day = parseInt(document.getElementById('ec-day').value);
+  c.startPeriod = parseInt(document.getElementById('ec-period').value);
+  c.periods = parseInt(document.getElementById('ec-length').value);
+  c.startWeek = parseInt(document.getElementById('ec-wstart').value) || 1;
+  c.endWeek = parseInt(document.getElementById('ec-wend').value) || 16;
+  if (modalCourseColor) c.color = modalCourseColor;
+  editingCourseId = null; modalCourseColor = null;
+  closeModal(); save(); renderSchedule();
+}
+function deleteCourseEdit() {
+  DATA.schedule.courses = DATA.schedule.courses.filter(x => String(x.id) !== String(editingCourseId));
+  editingCourseId = null;
+  closeModal(); save(); renderSchedule();
+}
+
+// ---- 空余/课余时间事项 ----
+let slotCtx = null;
+function openSlotModal(day, t, en) {
+  slotCtx = {day, t, en};
+  const dayNames = ['周一','周二','周三','周四','周五','周六','周日'];
+  const listHtml = getSchedItems(day, t).map((it, i) => `
+    <div class="modal-item">
+      ${it.type==='todo'
+        ? `<span class="status ${it.done?'done':'undone'}" style="cursor:pointer" onclick="toggleSchedItem(${day},${t},${i});refreshSlotModal()"></span>`
+        : '<span>📌</span>'}
+      <span style="${it.done?'text-decoration:line-through;color:var(--text3)':''}">${escapeHtml(it.text)}</span>
+      <span class="si-del" style="margin-left:auto" onclick="deleteSchedItem(${day},${t},${i});refreshSlotModal()">×</span>
+    </div>`).join('') || '<div class="modal-empty">暂无事项，在下方添加</div>';
+  const html = `
+    <div class="modal-section">
+      <div class="modal-section-title">${dayNames[day]} ${minToText(t)} - ${minToText(en)}</div>
+      ${listHtml}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <input class="inp" id="slot-text" placeholder="待办或事件（如：乘坐通勤车）" style="flex:1;min-width:150px" onkeydown="if(event.key==='Enter')addSlotItem()">
+      <select class="select-inp" id="slot-type" style="width:96px;min-height:44px">
+        <option value="todo">待办</option>
+        <option value="event">事件</option>
+      </select>
+      <button class="btn" onclick="addSlotItem()">添加</button>
+    </div>`;
+  openModal('空余 / 课余时间', html);
+}
+function refreshSlotModal() { if (slotCtx) openSlotModal(slotCtx.day, slotCtx.t, slotCtx.en); }
+function addSlotItem() {
+  if (!slotCtx) return;
+  const text = document.getElementById('slot-text').value.trim();
+  const type = document.getElementById('slot-type').value;
+  if (!text) return;
+  const arr = getSchedItems(slotCtx.day, slotCtx.t);
+  arr.push({id: Date.now() + Math.random(), text, type, done: false});
+  setSchedItems(slotCtx.day, slotCtx.t, arr);
+  save(); renderSchedule(); refreshSlotModal();
+}
+function toggleSchedItem(day, t, i) {
+  const arr = getSchedItems(day, t);
+  if (arr[i]) arr[i].done = !arr[i].done;
+  setSchedItems(day, t, arr);
+  save(); renderSchedule();
+}
+function deleteSchedItem(day, t, i) {
+  const arr = getSchedItems(day, t);
+  arr.splice(i, 1);
+  setSchedItems(day, t, arr);
+  save(); renderSchedule();
+}
+
+load();
+renderSchedule();
+</script>
+</body>
+</html>
