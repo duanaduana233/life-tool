@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>课程表</title>
+<style>
+:root {
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text2: #666;
+  --text3: #999;
+  --border: #e0e0e0;
+  --accent-health: #2d8a4e;
+  --accent-study: #2563b5;
+  --accent-hobby: #7c3aed;
+  --accent-finance: #d97706;
+  --accent-time: #0d9488;
+  --time-saved: #16a34a;
+  --time-free: #2563eb;
+  --time-squeeze: #dc2626;
+  --red: #dc2626;
+  --green: #16a34a;
+  --blue: #2563eb;
+  --yellow: #d97706;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --card: #141414;
+    --text: #f0f0f0;
+    --text2: #aaa;
+    --text3: #666;
+    --border: #222;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:var(--font); background:var(--bg); color:var(--text); line-height:1.5; padding:12px; }
+.container { max-width:1100px; margin:0 auto; }
+header { margin-bottom:16px; }
+header h1 { font-size:20px; font-weight:600; }
+header p { font-size:13px; color:var(--text2); margin-top:2px; }
+
+.tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+.tab {
+  padding:10px 16px; border-radius:var(--radius); border:1px solid var(--border);
+  background:var(--card); color:var(--text2); cursor:pointer; font-size:14px;
+  transition:all .15s; font-weight:500; min-height:44px; display:flex; align-items:center;
+}
+.tab:hover { color:var(--text); }
+.tab.active { background:var(--text); color:var(--card); border-color:var(--text); }
+.tab-health.active { background:var(--accent-health); border-color:var(--accent-health); }
+.tab-study.active { background:var(--accent-study); border-color:var(--accent-study); }
+.tab-hobby.active { background:var(--accent-hobby); border-color:var(--accent-hobby); }
+.tab-finance.active { background:var(--accent-finance); border-color:var(--accent-finance); }
+.tab-time.active { background:var(--accent-time); border-color:var(--accent-time); }
+
+.panel { display:none; }
+.panel.active { display:block; animation:fade .2s; }
+@keyframes fade { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+.card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px; margin-bottom:10px; box-shadow:var(--shadow);
+}
+.card-title { font-size:15px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.card-title .dot { width:8px; height:8px; border-radius:50%; }
+
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+.cal-header { font-size:11px; color:var(--text3); padding:6px 2px; font-weight:500; }
+.cal-day {
+  aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+  border-radius:8px; font-size:14px; cursor:pointer; position:relative;
+  border:1px solid transparent; transition:all .15s; min-height:40px;
+}
+.cal-day:hover { background:rgba(0,0,0,0.04); }
+.cal-day.today { background:var(--text); color:var(--card); font-weight:600; }
+.cal-day.selected { border-color:var(--accent-study); background:rgba(37,99,181,0.06); }
+.cal-day.has-event { background:rgba(37,99,181,0.08); }
+.cal-day .cal-dot { position:absolute; bottom:4px; width:5px; height:5px; border-radius:50%; background:var(--green); }
+
+.check-list { display:flex; flex-direction:column; gap:6px; }
+.check-row {
+  display:flex; align-items:center; gap:10px; padding:10px;
+  border-radius:8px; transition:background .15s; min-height:44px;
+}
+.check-row:hover { background:rgba(0,0,0,0.03); }
+.check-box {
+  width:22px; height:22px; border:2px solid var(--border); border-radius:6px;
+  flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.check-row.done .check-box { background:var(--green); border-color:var(--green); color:#fff; }
+.check-row.done .check-text { text-decoration:line-through; color:var(--text3); }
+.check-text { flex:1; font-size:15px; }
+.check-meta { font-size:12px; color:var(--text3); white-space:nowrap; }
+
+.inp {
+  padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+  background:transparent; color:var(--text); font-family:inherit; font-size:15px; outline:none; width:100%;
+  min-height:44px;
+}
+.inp:focus { border-color:var(--text2); }
+.inp-sm { padding:8px 10px; font-size:14px; min-height:40px; }
+.btn {
+  padding:10px 16px; border:none; border-radius:8px; background:var(--text); color:var(--card);
+  font-family:inherit; font-size:14px; cursor:pointer; transition:opacity .15s; white-space:nowrap;
+  min-height:44px; display:flex; align-items:center; justify-content:center;
+}
+.btn:hover { opacity:.85; }
+.btn-sm { padding:8px 12px; font-size:13px; min-height:40px; }
+.btn-red { background:var(--red); }
+.btn-blue { background:var(--blue); }
+.btn-green { background:var(--green); }
+.btn-outline {
+  padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+  background:transparent; color:var(--text2); font-family:inherit; font-size:13px;
+  cursor:pointer; transition:all .15s; min-height:40px;
+}
+.btn-outline:hover { border-color:var(--text2); color:var(--text); }
+.btn-outline.active { background:var(--text); color:var(--card); border-color:var(--text); }
+
+.badge { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px; }
+.badge-green { background:rgba(22,163,74,0.12); color:var(--green); }
+.badge-red { background:rgba(220,38,38,0.12); color:var(--red); }
+.badge-blue { background:rgba(37,99,235,0.12); color:var(--blue); }
+.badge-yellow { background:rgba(217,119,6,0.12); color:var(--yellow); }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:768px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+
+.table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); }
+th { font-weight:600; color:var(--text2); font-size:13px; }
+tr:hover { background:rgba(0,0,0,0.02); }
+
+.progress { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:4px; }
+.progress-bar { height:100%; border-radius:3px; transition:width .3s; }
+
+.achieve-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+@media (min-width:768px) { .achieve-grid { grid-template-columns:repeat(4,1fr); } }
+.achieve-card { text-align:center; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); }
+.achieve-num { font-size:22px; font-weight:600; }
+.achieve-label { font-size:12px; color:var(--text2); margin-top:2px; }
+
+.link-item { display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px; }
+.link-item:hover { background:rgba(0,0,0,0.03); }
+.link-url { color:var(--accent-study); font-size:14px; text-decoration:none; word-break:break-all; }
+.link-url:hover { text-decoration:underline; }
+
+.fund-total { font-size:18px; font-weight:600; margin-top:8px; }
+.fund-positive { color:var(--green); }
+.fund-negative { color:var(--red); }
+
+.delete-btn {
+  opacity:0; transition:opacity .15s; cursor:pointer; color:var(--text3);
+  padding:6px 8px; border-radius:4px; font-size:13px; min-height:32px; display:flex; align-items:center;
+}
+.delete-btn:hover { color:var(--red); background:rgba(220,38,38,0.08); }
+tr:hover .delete-btn, .check-row:hover .delete-btn { opacity:1; }
+@media (max-width:768px) { .delete-btn { opacity:1; } }
+
+.edit-btn {
+  opacity:0; transition:opacity .15s; cursor:pointer; color:var(--text3);
+  padding:6px 8px; border-radius:4px; font-size:13px; min-height:32px; display:flex; align-items:center;
+}
+.edit-btn:hover { color:var(--blue); background:rgba(37,99,235,0.08); }
+tr:hover .edit-btn { opacity:1; }
+@media (max-width:768px) { .edit-btn { opacity:1; } }
+
+.add-row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+
+.schedule-item { 
+  padding:10px 12px; border-radius:8px; background:var(--bg); border:1px solid var(--border); 
+  font-size:14px; margin-bottom:6px; display:flex; align-items:center; gap:10px; min-height:44px;
+}
+.schedule-item.done { background:rgba(22,163,74,0.06); border-color:rgba(22,163,74,0.2); }
+.schedule-item.done .schedule-text { text-decoration:line-through; color:var(--text3); }
+.schedule-text { flex:1; outline:none; font-size:15px; }
+.schedule-text:focus { background:var(--card); }
+
+.kanban { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:768px) { .kanban { grid-template-columns:1fr; } }
+.kanban-col { border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--card); }
+.kanban-title { font-size:14px; font-weight:600; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.kanban-item { padding:10px; border-radius:8px; background:var(--bg); margin-bottom:8px; font-size:14px; }
+.kanban-item .kb-progress { height:5px; background:var(--border); border-radius:3px; margin-top:8px; overflow:hidden; }
+.kanban-item .kb-bar { height:100%; border-radius:3px; }
+
+.today-mark { font-size:11px; color:var(--green); font-weight:600; margin-left:4px; }
+
+/* Modal */
+.modal-overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.5); z-index:1000; display:none;
+  align-items:center; justify-content:center; padding:16px;
+}
+.modal-overlay.active { display:flex; }
+.modal {
+  background:var(--card); border-radius:16px; width:100%; max-width:500px;
+  max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  animation:modalIn .2s;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal-header {
+  padding:16px 20px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; background:var(--card); z-index:10; border-radius:16px 16px 0 0;
+}
+.modal-title { font-size:17px; font-weight:600; }
+.modal-close { 
+  width:36px; height:36px; border-radius:50%; border:none; background:var(--bg);
+  color:var(--text2); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.modal-close:hover { background:var(--border); }
+.modal-body { padding:16px 20px; }
+.modal-section { margin-bottom:16px; }
+.modal-section-title { font-size:14px; font-weight:600; color:var(--text2); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.modal-item { padding:8px 0; font-size:14px; display:flex; align-items:center; gap:8px; }
+.modal-item .status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.modal-item .status.done { background:var(--green); }
+.modal-item .status.undone { background:var(--border); }
+.modal-empty { color:var(--text3); font-size:13px; padding:8px 0; }
+
+/* Stats */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:768px) { .stats-grid { grid-template-columns:1fr; } }
+.stats-card { padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); }
+.stats-title { font-size:13px; font-weight:600; color:var(--text2); margin-bottom:10px; }
+.heat-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.heat-cell {
+  aspect-ratio:1; border-radius:4px; font-size:9px; display:flex;
+  align-items:center; justify-content:center; color:transparent;
+  transition:all .15s; cursor:default;
+}
+.heat-cell.has-data { background:var(--accent-health); color:#fff; font-weight:600; font-size:10px; }
+.heat-cell.today { box-shadow:0 0 0 2px var(--text); }
+.heat-legend { display:flex; gap:8px; margin-top:8px; font-size:11px; color:var(--text3); align-items:center; }
+.heat-legend-dot { width:10px; height:10px; border-radius:3px; }
+
+.sleep-bar { display:flex; height:24px; border-radius:6px; overflow:hidden; margin-top:8px; }
+.sleep-segment { display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:600; transition:width .3s; }
+.sleep-legend { display:flex; gap:12px; margin-top:8px; font-size:11px; color:var(--text3); flex-wrap:wrap; }
+.sleep-legend-item { display:flex; align-items:center; gap:4px; }
+.sleep-legend-dot { width:10px; height:10px; border-radius:3px; }
+
+.stat-number { font-size:28px; font-weight:600; margin-top:4px; }
+.stat-label { font-size:12px; color:var(--text2); }
+
+/* Transaction */
+.tx-row {
+  display:flex; align-items:center; gap:10px; padding:10px;
+  border-radius:8px; transition:background .15s; min-height:48px;
+  border-bottom:1px solid var(--border);
+}
+.tx-row:last-child { border-bottom:none; }
+.tx-row:hover { background:rgba(0,0,0,0.02); }
+.tx-icon {
+  width:36px; height:36px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
+}
+.tx-icon.income { background:rgba(22,163,74,0.12); color:var(--green); }
+.tx-icon.expense { background:rgba(220,38,38,0.12); color:var(--red); }
+.tx-info { flex:1; }
+.tx-name { font-size:14px; font-weight:500; }
+.tx-date { font-size:11px; color:var(--text3); margin-top:1px; }
+.tx-amount { font-size:15px; font-weight:600; }
+.tx-amount.income { color:var(--green); }
+.tx-amount.expense { color:var(--red); }
+
+.tx-type-switch { display:flex; gap:4px; margin-bottom:8px; }
+.tx-type-btn {
+  flex:1; padding:8px; border:1px solid var(--border); border-radius:8px;
+  background:transparent; color:var(--text2); font-family:inherit; font-size:13px;
+  cursor:pointer; text-align:center; transition:all .15s; min-height:40px;
+}
+.tx-type-btn.active.income { background:var(--green); color:#fff; border-color:var(--green); }
+.tx-type-btn.active.expense { background:var(--red); color:#fff; border-color:var(--red); }
+
+.summary-row { display:flex; gap:12px; margin-bottom:12px; }
+.summary-item { flex:1; text-align:center; padding:10px; border-radius:8px; background:var(--bg); border:1px solid var(--border); }
+.summary-value { font-size:20px; font-weight:600; }
+.summary-label { font-size:11px; color:var(--text2); margin-top:2px; }
+
+/* Touch friendly */
+@media (max-width:768px) {
+  body { padding:8px; }
+  .cal-day { font-size:15px; min-height:44px; }
+  .check-box { width:24px; height:24px; }
+  .btn, .btn-sm, .btn-outline, .tx-type-btn { min-height:48px; }
+  .inp { min-height:48px; font-size:16px; }
+  .schedule-item { min-height:48px; }
+  .tx-row { min-height:52px; }
+}
+
+.account-item { padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); margin-bottom:8px; }
+.account-name { font-size:14px; font-weight:600; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+.account-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.account-row label { font-size:12px; color:var(--text3); width:60px; flex-shrink:0; }
+.account-row .account-fund { font-size:14px; color:var(--text2); flex:1; }
+.account-row .account-total { font-size:15px; font-weight:600; color:var(--text); flex:1; }
+.account-row .inp { flex:1; min-height:40px; }
+.account-delete { color:var(--text3); font-size:12px; cursor:pointer; padding:4px 8px; border-radius:4px; }
+.account-delete:hover { color:var(--red); background:rgba(220,38,38,0.08); }
+.select-inp { padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--text); font-family:inherit; font-size:15px; outline:none; width:100%; min-height:44px; }
+.select-inp:focus { border-color:var(--text2); }
+
+/* ===== 时间资产管理 ===== */
+.time-section-title { font-size:14px; font-weight:600; color:var(--text2); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.time-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.time-badge-saved { background:rgba(22,163,74,0.12); color:var(--time-saved); }
+.time-badge-free { background:rgba(37,99,235,0.12); color:var(--time-free); }
+.time-badge-squeeze { background:rgba(220,38,38,0.12); color:var(--time-squeeze); }
+.time-stat-box { text-align:center; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); }
+.time-stat-value { font-size:24px; font-weight:600; }
+.time-stat-label { font-size:12px; color:var(--text2); margin-top:2px; }
+.time-input-min { width:80px; }
+.time-input-hm { width:100px; }
+.time-hm-wrap { display:flex; align-items:center; gap:4px; }
+.time-hm-wrap input { width:60px; text-align:center; }
+.time-hm-wrap span { color:var(--text3); font-size:13px; }
+.time-star { font-size:20px; color:var(--border); transition:color .2s; }
+.time-star.active { color:#f59e0b; }
+.time-pl-positive { color:var(--green); }
+.time-pl-negative { color:var(--red); }
+.time-pl-zero { color:var(--text2); }
+.practice-sync-hint { font-size:11px; color:var(--text3); margin-left:8px; }
+.value-stars { display:flex; gap:2px; }
+.value-star { cursor:pointer; font-size:16px; color:var(--border); transition:color .15s; }
+.value-star.active { color:#f59e0b; }
+.value-star:hover { color:#fbbf24; }
+
+/* ===== 课程表 ===== */
+.tab-sched.active { background:#be185d; border-color:#be185d; }
+.sched-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.sched-week-label { font-size:14px; font-weight:600; }
+.sched-cols { display:flex; min-width:760px; }
+.sched-col { flex:1; border-left:1px solid var(--border); position:relative; min-width:0; }
+.sched-col:first-child { border-left:none; flex:0 0 66px; }
+.sched-col.is-today { background:rgba(22,163,74,0.04); }
+.sched-head { height:36px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:12px; font-weight:600; border-bottom:2px solid var(--border); line-height:1.25; }
+.sched-head em { font-style:normal; font-weight:400; font-size:10px; color:var(--text3); }
+.sched-head.today { color:var(--green); }
+.sched-head.today em { color:var(--green); }
+.sched-body { position:relative; }
+.sched-cell { border-bottom:1px solid var(--border); cursor:pointer; box-sizing:border-box; transition:filter .1s; }
+.sched-cell:hover { filter:brightness(0.95); }
+.sched-c-free { background-image:repeating-linear-gradient(45deg, rgba(37,99,181,0.07) 0 3px, transparent 3px 9px); }
+.sched-c-break { background-image:radial-gradient(rgba(120,120,120,0.30) 1px, transparent 1.5px); background-size:9px 9px; }
+.sched-c-lunch { background-color:rgba(13,148,136,0.08); background-image:radial-gradient(rgba(13,148,136,0.28) 1px, transparent 1.5px); background-size:9px 9px; }
+.top2 { border-top:2px solid var(--text2) !important; }
+.sched-c-end { border-bottom:none; }
+.sched-rowlabel { display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; padding:2px 6px 0 0; font-size:10px; color:var(--text2); border-bottom:1px solid var(--border); box-sizing:border-box; line-height:1.3; text-align:right; }
+.sched-rowlabel em { font-style:normal; color:var(--text3); font-size:9px; }
+.sched-rl-lunch { color:var(--accent-time); font-weight:600; }
+.sched-rl-end { border-bottom:none; }
+.we-hour { font-size:9px; color:var(--text3); padding-left:3px; }
+.course-blk { position:absolute; left:2px; right:2px; border-radius:6px; padding:4px 6px; font-size:11px; color:#fff; overflow:hidden; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.25); z-index:5; line-height:1.3; }
+.course-blk:hover { filter:brightness(1.1); }
+.course-blk .cb-name { font-weight:600; font-size:12px; }
+.course-blk .cb-room { opacity:0.92; font-size:10px; margin-top:1px; }
+.course-blk .cb-weeks { opacity:0.85; font-size:9px; }
+.event-blk { position:absolute; left:2px; right:2px; border-radius:5px; border:1.5px dashed; background:var(--card); font-size:10px; font-weight:600; padding:2px 5px; overflow:hidden; cursor:pointer; z-index:4; line-height:1.25; }
+.todo-blk { position:absolute; left:2px; right:2px; min-height:18px; border-radius:4px; background:rgba(217,119,6,0.15); color:var(--yellow); font-size:10px; padding:1px 5px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; cursor:pointer; z-index:4; }
+.todo-blk.done { opacity:0.5; text-decoration:line-through; }
+.sched-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text2); margin-top:12px; }
+.sched-legend .lg { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-2px; margin-right:4px; border:1px solid var(--border); }
+.color-swatches { display:flex; gap:8px; flex-wrap:wrap; }
+.swatch { width:34px; height:34px; border-radius:8px; cursor:pointer; border:3px solid transparent; }
+.swatch.sel { border-color:var(--text); transform:scale(1.08); }
+.sched-form-row { margin-bottom:10px; }
+.sched-form-row label { display:block; font-size:12px; color:var(--text2); margin-bottom:4px; }
+.sched-form-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+@media (prefers-color-scheme: dark) {
+  .sched-c-free { background-image:repeating-linear-gradient(45deg, rgba(120,160,255,0.13) 0 3px, transparent 3px 9px); }
+  .sched-c-break { background-image:radial-gradient(rgba(200,200,200,0.25) 1px, transparent 1.5px); }
+  .sched-c-lunch { background-color:rgba(13,148,136,0.14); }
+  .event-blk { background:#1a1a1a; }
+}
+</style>
+<link rel="manifest" href="manifest-schedule.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#be185d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="课程表">
+<link rel="apple-touch-icon" href="sched-icon-192.png">
+</head>
+<body>
+<div class="container">
+  <header>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <h1>课程表</h1>
+        <p>课程 · 待办 · 特殊事件</p>
+      </div>
+      <div>
+        <a href="index.html" class="btn btn-sm btn-outline" style="text-decoration:none">📋 完整看板</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 课表 ===== -->
+  <div class="panel active" id="panel-sched">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:#be185d"></span>课程表 · 日程表</div>
+      <div class="sched-toolbar">
+        <button class="btn-outline" onclick="schedNav(-1)">◀ 上一周</button>
+        <button class="btn-outline" onclick="schedNav(0)">本周</button>
+        <button class="btn-outline" onclick="schedNav(1)">下一周 ▶</button>
+        <span class="sched-week-label" id="sched-week-label"></span>
+        <span style="flex:1"></span>
+        <label style="font-size:12px;color:var(--text3)">学期开始</label>
+        <input type="date" class="inp inp-sm" id="sched-semester-start" style="width:150px" onchange="schedSetSemester(this.value)">
+        <button class="btn btn-sm" style="background:#be185d" onclick="openCourseModal()">＋ 添加课程</button>
+      </div>
+      <div class="table-wrap">
+        <div id="sched-grid"></div>
+      </div>
+      <div class="sched-legend">
+        <span><span class="lg" style="background:#5b7fa6;border:none"></span>课程（实色，点击编辑）</span>
+        <span><span class="lg sched-c-free"></span>空闲时段（条纹，点击排课）</span>
+        <span><span class="lg sched-c-break"></span>课余时间（波点，点击加事项）</span>
+        <span><span class="lg sched-c-lunch"></span>午/晚休息（淡色）</span>
+        <span><span class="lg" style="border:1.5px dashed #5e9490;background:transparent"></span>特殊事件（每周循环）</span>
+        <span><span class="lg" style="background:rgba(217,119,6,0.25);border:none"></span>待办事项</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:#be185d"></span>本周待办事项</div>
+      <div id="sched-todo-list" class="check-list"></div>
+      <div class="add-row">
+        <input class="inp" id="sched-todo-text" placeholder="待办内容..." style="flex:1;min-width:140px">
+        <input class="inp" id="sched-todo-date" type="date" style="width:150px">
+        <input class="inp" id="sched-todo-time" type="time" style="width:120px">
+        <button class="btn btn-sm" style="background:#be185d" onclick="schedQuickAddTodo()">添加待办</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">也可以直接点击课表中波点/条纹区域的空格子，在对应时间添加待办或特殊事件（如通勤车）</div>
+    </div>
+  
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">历史记录</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+
+
+<script>
+const STORAGE_KEY = 'life-board-v8';
+// 独立课表页：只读写整个看板数据中的 schedule 部分，与完整看板共享数据
+let DATA = { schedule: { semesterStart: '2026-09-07', courses: [], events: [], todos: [] } };
+
+function load() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const p = JSON.parse(s);
+      if (p.schedule) DATA.schedule = p.schedule;
+    }
+  } catch(e){}
+}
+function save() {
+  try {
+    let p = {};
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) p = JSON.parse(s);
+    p.schedule = DATA.schedule;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+  } catch(e){}
+}
+
+function today() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ===================== MODAL =====================
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ===================== 课程表 =====================
+const SCHED = {
+  palette: ['#5b7fa6','#a96a73','#b8935f','#6e9e8f','#7f85b0','#b4828e','#7a9461','#8a7a9b','#5e9490','#9a9187'], // 莫兰迪低饱和色系
+  sess: {
+    morning:   {name:'上午', times:[[480,525],[530,575],[590,635],[640,685],[690,735]]},
+    afternoon: {name:'下午', times:[[840,885],[890,935],[950,995],[1000,1045],[1050,1095]]},
+    evening:   {name:'晚上', times:[[1140,1185],[1190,1235],[1240,1285]]}
+  }
+};
+const WE_HOUR_H = 36; // 周末每小时格子高度
+let schedWeekOffset = 0;
+let schedPickedColor = SCHED.palette[0];
+let schedEditCourseId = null;
+let schedEditEventId = null;
+let schedSlotPrefill = null;
+
+function schedEnsure() {
+  if (!DATA.schedule) DATA.schedule = { semesterStart:'2026-09-07', courses:[], events:[], todos:[] };
+  const s = DATA.schedule;
+  if (!s.semesterStart) s.semesterStart = '2026-09-07';
+  if (!Array.isArray(s.courses)) s.courses = [];
+  if (!Array.isArray(s.events)) s.events = [];
+  if (!Array.isArray(s.todos)) s.todos = [];
+}
+
+function fmtMin(m) { return Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); }
+function hmToMin(s) { if (!s) return null; const p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function mondayOfDate(d) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = x.getDay();
+  x.setDate(x.getDate() - day + (day === 0 ? -6 : 1));
+  return x;
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function dateStr(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+// 工作日时间轴行：7:00 → 上午5节 → 午休 → 下午5节 → 晚休 → 晚上3节 → 22:00/23:00 → 24:00
+const WD_ROWS = (function(){
+  const rows = [{start:420, end:480, label:'7:00', sub:'课余', type:'break', h:36}];
+  const addSess = (key) => {
+    SCHED.sess[key].times.forEach((t,i) => {
+      rows.push({ start:t[0], end:t[1], label:'第'+(i+1)+'节', sub:fmtMin(t[0]), type:'class', session:key, period:i+1, h:44, top2:i===0&&key!=='morning' });
+    });
+  };
+  addSess('morning');
+  rows.push({ start:735, end:840, label:'午休', sub:'12:15-14:00', type:'lunch', h:42, top2:true });
+  addSess('afternoon');
+  rows.push({ start:1095, end:1140, label:'晚休', sub:'18:15-19:00', type:'lunch', h:32, top2:true });
+  addSess('evening');
+  rows.push({ start:1285, end:1320, label:'21:25', sub:'下课', type:'break', h:24, top2:true });
+  rows.push({ start:1320, end:1380, label:'22:00', sub:'', type:'break', h:34 });
+  rows.push({ start:1380, end:1440, label:'23:00', sub:'', type:'break', h:34 });
+  rows.push({ start:1440, end:1440, label:'24:00', sub:'', type:'end', h:16 });
+  let y = 0;
+  rows.forEach(r => { r.y = y; y += r.h; });
+  return rows;
+})();
+const WD_TOTAL_H = WD_ROWS.reduce((a,r) => a + r.h, 0);
+
+function wdMinToPx(m) {
+  for (const r of WD_ROWS) {
+    if (r.end === r.start) { if (m >= r.start) return r.y; continue; }
+    if (m <= r.end) {
+      const frac = Math.max(0, Math.min(m - r.start, r.end - r.start)) / (r.end - r.start);
+      return r.y + frac * r.h;
+    }
+  }
+  return WD_TOTAL_H;
+}
+function weMinToPx(m) { return Math.max(0, (m - 420)) / 60 * WE_HOUR_H; }
+
+function schedViewWeek() {
+  schedEnsure();
+  const semMonday = mondayOfDate(new Date(DATA.schedule.semesterStart + 'T00:00:00'));
+  const monday = addDays(mondayOfDate(new Date()), schedWeekOffset * 7);
+  const weekNo = Math.round((monday - semMonday) / 604800000) + 1;
+  const days = [];
+  for (let i = 0; i < 7; i++) days.push(addDays(monday, i));
+  return { monday, weekNo, days };
+}
+
+function schedNav(d) {
+  schedWeekOffset = d === 0 ? 0 : schedWeekOffset + d;
+  renderSchedule();
+}
+function schedSetSemester(v) {
+  if (!v) return;
+  DATA.schedule.semesterStart = v;
+  save();
+  renderSchedule();
+}
+
+function renderSchedule() {
+  schedEnsure();
+  const el = document.getElementById('sched-grid');
+  if (!el) return;
+  const { days, weekNo } = schedViewWeek();
+  document.getElementById('sched-week-label').textContent =
+    '第 ' + weekNo + ' 周 · ' + (days[0].getMonth()+1) + '/' + days[0].getDate() + ' - ' + (days[6].getMonth()+1) + '/' + days[6].getDate();
+  const semInp = document.getElementById('sched-semester-start');
+  if (semInp && semInp.value !== DATA.schedule.semesterStart) semInp.value = DATA.schedule.semesterStart;
+  const tdInp = document.getElementById('sched-todo-date');
+  if (tdInp && !tdInp.value) tdInp.value = today();
+
+  const todayStr = today();
+  const dayNames = ['周一','周二','周三','周四','周五','周六','周日'];
+  let html = '<div class="sched-cols">';
+
+  // 时间轴列
+  html += '<div class="sched-col sched-col-label"><div class="sched-head">时间</div>';
+  WD_ROWS.forEach(r => {
+    html += '<div class="sched-rowlabel sched-rl-' + r.type + (r.top2 ? ' top2' : '') + '" style="height:' + r.h + 'px"><span>' + r.label + '</span>' + (r.sub ? '<em>' + r.sub + '</em>' : '') + '</div>';
+  });
+  html += '</div>';
+
+  for (let day = 1; day <= 7; day++) {
+    const isWE = day >= 6;
+    const ds = dateStr(days[day-1]);
+    html += '<div class="sched-col' + (ds === todayStr ? ' is-today' : '') + '">';
+    html += '<div class="sched-head' + (ds === todayStr ? ' today' : '') + '">' + dayNames[day-1] + '<em>' + (days[day-1].getMonth()+1) + '/' + days[day-1].getDate() + '</em></div>';
+    html += '<div class="sched-body">';
+    if (!isWE) {
+      WD_ROWS.forEach((r, ri) => {
+        if (r.type === 'end') { html += '<div class="sched-cell sched-c-end" style="height:' + r.h + 'px"></div>'; return; }
+        const cls = r.type === 'class' ? 'sched-c-free' : (r.type === 'lunch' ? 'sched-c-lunch' : 'sched-c-break');
+        html += '<div class="sched-cell ' + cls + (r.top2 ? ' top2' : '') + '" style="height:' + r.h + 'px" onclick="schedCellClick(' + day + ',' + ri + ')"></div>';
+      });
+      // 课程色块（本周在跨度内才显示）
+      DATA.schedule.courses.filter(c => c.weekday === day && weekNo >= c.weekStart && weekNo <= c.weekEnd).forEach(c => {
+        const t = SCHED.sess[c.session].times;
+        if (!t || c.start < 1 || c.end > t.length) return;
+        const top = wdMinToPx(t[c.start-1][0]);
+        const bottom = wdMinToPx(t[c.end-1][1]);
+        html += '<div class="course-blk" style="top:' + top + 'px;height:' + Math.max(bottom - top - 2, 18) + 'px;background:' + c.color + '" onclick="event.stopPropagation();openCourseModal(\'' + c.id + '\')">'
+          + '<div class="cb-name">' + escHtml(c.name) + '</div>'
+          + (c.room ? '<div class="cb-room">' + escHtml(c.room) + '</div>' : '')
+          + '<div class="cb-weeks">' + c.weekStart + '-' + c.weekEnd + '周</div></div>';
+      });
+    } else {
+      for (let h = 7; h < 24; h++) {
+        html += '<div class="sched-cell sched-c-break sched-we-cell" style="height:' + WE_HOUR_H + 'px" onclick="schedWeCellClick(' + day + ',' + h + ')"><span class="we-hour">' + h + ':00</span></div>';
+      }
+    }
+    // 特殊事件（每周循环，含周末）
+    DATA.schedule.events.filter(e => e.weekday === day).forEach(e => {
+      const top = isWE ? weMinToPx(e.startMin) : wdMinToPx(e.startMin);
+      const bottom = isWE ? weMinToPx(e.endMin) : wdMinToPx(e.endMin);
+      html += '<div class="event-blk" title="' + escHtml(e.name) + ' ' + fmtMin(e.startMin) + '-' + fmtMin(e.endMin) + '" style="top:' + top + 'px;height:' + Math.max(bottom - top - 2, 16) + 'px;border-color:' + (e.color||'#5e9490') + ';color:' + (e.color||'#5e9490') + '" onclick="event.stopPropagation();openEventModal(\'' + e.id + '\')">' + escHtml(e.name) + '</div>';
+    });
+    // 当天待办（带时间的显示在时间轴上）
+    DATA.schedule.todos.filter(t => t.date === ds && t.time).forEach(t => {
+      const m = hmToMin(t.time);
+      if (m === null) return;
+      const top = isWE ? weMinToPx(m) : wdMinToPx(m);
+      html += '<div class="todo-blk' + (t.done ? ' done' : '') + '" style="top:' + top + 'px" title="点击勾选完成" onclick="event.stopPropagation();toggleSchedTodo(\'' + t.id + '\')">' + (t.done ? '☑ ' : '☐ ') + escHtml(t.text) + '</div>';
+    });
+    html += '</div></div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+  renderSchedTodoList(days);
+}
+
+function renderSchedTodoList(days) {
+  const el = document.getElementById('sched-todo-list');
+  if (!el) return;
+  const start = dateStr(days[0]), end = dateStr(days[6]);
+  const list = DATA.schedule.todos.filter(t => t.date >= start && t.date <= end)
+    .sort((a,b) => (a.date + (a.time||'99')) .localeCompare(b.date + (b.time||'99')));
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:6px 0">本周暂无待办事项</div>';
+    return;
+  }
+  const dayNames = ['周日','周一','周二','周三','周四','周五','周六'];
+  el.innerHTML = list.map(t => {
+    const d = new Date(t.date + 'T00:00:00');
+    return '<div class="check-row' + (t.done ? ' done' : '') + '">'
+      + '<div class="check-box" onclick="toggleSchedTodo(\'' + t.id + '\')">' + (t.done ? '✓' : '') + '</div>'
+      + '<div class="check-text">' + escHtml(t.text) + '</div>'
+      + '<div class="check-meta">' + dayNames[d.getDay()] + ' ' + t.date.slice(5) + (t.time ? ' ' + t.time : '') + '</div>'
+      + '<div class="delete-btn" onclick="schedDeleteTodo(\'' + t.id + '\')">删除</div></div>';
+  }).join('');
+}
+
+// ---------- 点击格子 ----------
+function schedCellClick(day, ri) {
+  const r = WD_ROWS[ri];
+  if (r.type === 'class') {
+    const cnt = SCHED.sess[r.session].times.length;
+    openCourseModal(null, { weekday: day, session: r.session, start: r.period, end: Math.min(r.period + 1, cnt) });
+  } else {
+    schedSlotPrefill = { weekday: day, time: fmtMin(r.start) };
+    openSlotModal();
+  }
+}
+function schedWeCellClick(day, hour) {
+  schedSlotPrefill = { weekday: day, time: fmtMin(hour * 60) };
+  openSlotModal();
+}
+function openSlotModal() {
+  const p = schedSlotPrefill || { weekday: 1, time: '08:00' };
+  const { days } = schedViewWeek();
+  const ds = dateStr(days[p.weekday - 1]);
+  const dayNames = ['周一','周二','周三','周四','周五','周六','周日'];
+  openModal('添加事项 · ' + dayNames[p.weekday - 1] + ' ' + p.time, `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="background:#be185d" onclick="openTodoModal()">📝 待办事项（单次，${ds}）</button>
+      <button class="btn btn-blue" onclick="openEventModal()">🔁 特殊事件（每周循环，如通勤车）</button>
+      <button class="btn-outline" onclick="openCourseModal()">📚 改为添加课程</button>
+    </div>`);
+}
+
+// ---------- 课程 ----------
+function colorSwatchesHtml(sel) {
+  return '<div class="color-swatches">' + SCHED.palette.map(c =>
+    '<div class="swatch' + (c === sel ? ' sel' : '') + '" style="background:' + c + '" onclick="schedPickColor(this,\'' + c + '\')"></div>'
+  ).join('') + '</div>';
+}
+function schedPickColor(el, c) {
+  schedPickedColor = c;
+  el.parentElement.querySelectorAll('.swatch').forEach(s => s.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function periodOptions(sessKey, sel) {
+  const cnt = SCHED.sess[sessKey].times.length;
+  let h = '';
+  for (let i = 1; i <= cnt; i++) {
+    const t = SCHED.sess[sessKey].times[i-1];
+    h += '<option value="' + i + '"' + (i === sel ? ' selected' : '') + '>第' + i + '节（' + fmtMin(t[0]) + '-' + fmtMin(t[1]) + '）</option>';
+  }
+  return h;
+}
+function schedSessChange() {
+  const sess = document.getElementById('sc-session').value;
+  const cnt = SCHED.sess[sess].times.length;
+  document.getElementById('sc-start').innerHTML = periodOptions(sess, 1);
+  document.getElementById('sc-end').innerHTML = periodOptions(sess, Math.min(2, cnt));
+}
+function openCourseModal(id, prefill) {
+  schedEnsure();
+  schedEditCourseId = id || null;
+  const c = id ? DATA.schedule.courses.find(x => x.id === id) : null;
+  const sess = c ? c.session : (prefill && prefill.session) || 'morning';
+  schedPickedColor = c ? c.color : SCHED.palette[DATA.schedule.courses.length % SCHED.palette.length];
+  const start = c ? c.start : (prefill && prefill.start) || 1;
+  const end = c ? c.end : (prefill && prefill.end) || Math.min(2, SCHED.sess[sess].times.length);
+  const weekday = c ? c.weekday : (prefill && prefill.weekday) || 1;
+  const dayNames = ['周一','周二','周三','周四','周五'];
+  openModal(id ? '编辑课程' : '添加课程', `
+    <div class="sched-form-row"><label>课程名称</label><input class="inp" id="sc-name" placeholder="如：文化人类学导论" value="${c ? escHtml(c.name) : ''}"></div>
+    <div class="sched-form-2">
+      <div class="sched-form-row"><label>上课教室</label><input class="inp" id="sc-room" placeholder="如：文科楼 301" value="${c ? escHtml(c.room||'') : ''}"></div>
+      <div class="sched-form-row"><label>星期</label><select class="select-inp" id="sc-weekday">${dayNames.map((n,i)=>'<option value="'+(i+1)+'"'+(weekday===i+1?' selected':'')+'>'+n+'</option>').join('')}</select></div>
+    </div>
+    <div class="sched-form-2">
+      <div class="sched-form-row"><label>时段</label><select class="select-inp" id="sc-session" onchange="schedSessChange()">
+        <option value="morning"${sess==='morning'?' selected':''}>上午（8:00 起）</option>
+        <option value="afternoon"${sess==='afternoon'?' selected':''}>下午（14:00 起）</option>
+        <option value="evening"${sess==='evening'?' selected':''}>晚上（19:00 起）</option>
+      </select></div>
+      <div class="sched-form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label>从第几节</label><select class="select-inp" id="sc-start">${periodOptions(sess, start)}</select></div>
+        <div><label>到第几节</label><select class="select-inp" id="sc-end">${periodOptions(sess, end)}</select></div>
+      </div>
+    </div>
+    <div class="sched-form-2">
+      <div class="sched-form-row"><label>从第几周</label><input class="inp" id="sc-ws" type="number" min="1" max="30" value="${c ? c.weekStart : 1}"></div>
+      <div class="sched-form-row"><label>到第几周</label><input class="inp" id="sc-we" type="number" min="1" max="30" value="${c ? c.weekEnd : 16}"></div>
+    </div>
+    <div class="sched-form-row"><label>颜色</label>${colorSwatchesHtml(schedPickedColor)}</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" style="background:#be185d;flex:1" onclick="schedSaveCourse()">保存</button>
+      ${id ? '<button class="btn btn-red" onclick="schedDeleteCourse()">删除</button>' : ''}
+    </div>`);
+}
+function schedSaveCourse() {
+  const name = document.getElementById('sc-name').value.trim();
+  if (!name) return alert('请填写课程名称');
+  const sess = document.getElementById('sc-session').value;
+  const start = parseInt(document.getElementById('sc-start').value);
+  const end = parseInt(document.getElementById('sc-end').value);
+  const ws = parseInt(document.getElementById('sc-ws').value) || 1;
+  const we = parseInt(document.getElementById('sc-we').value) || 16;
+  if (start > end) return alert('结束节次不能早于开始节次');
+  if (ws > we) return alert('结束周不能早于开始周');
+  const data = {
+    name,
+    room: document.getElementById('sc-room').value.trim(),
+    weekday: parseInt(document.getElementById('sc-weekday').value),
+    session: sess, start, end, weekStart: ws, weekEnd: we,
+    color: schedPickedColor
+  };
+  if (schedEditCourseId) {
+    const c = DATA.schedule.courses.find(x => x.id === schedEditCourseId);
+    if (c) Object.assign(c, data);
+  } else {
+    data.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    DATA.schedule.courses.push(data);
+  }
+  save(); closeModal(); renderSchedule();
+}
+function schedDeleteCourse() {
+  if (!confirm('确定删除这门课程？')) return;
+  DATA.schedule.courses = DATA.schedule.courses.filter(x => x.id !== schedEditCourseId);
+  save(); closeModal(); renderSchedule();
+}
+
+// ---------- 特殊事件（每周循环） ----------
+function openEventModal(id) {
+  schedEnsure();
+  schedEditEventId = id || null;
+  const e = id ? DATA.schedule.events.find(x => x.id === id) : null;
+  const p = schedSlotPrefill || {};
+  schedPickedColor = e ? (e.color || '#5e9490') : '#5e9490';
+  const weekday = e ? e.weekday : (p.weekday || 1);
+  const dayNames = ['周一','周二','周三','周四','周五','周六','周日'];
+  openModal(id ? '编辑特殊事件' : '添加特殊事件（每周循环）', `
+    <div class="sched-form-row"><label>事件名称</label><input class="inp" id="ev-name" placeholder="如：乘坐通勤车" value="${e ? escHtml(e.name) : ''}"></div>
+    <div class="sched-form-row"><label>星期</label><select class="select-inp" id="ev-weekday">${dayNames.map((n,i)=>'<option value="'+(i+1)+'"'+(weekday===i+1?' selected':'')+'>'+n+'</option>').join('')}</select></div>
+    <div class="sched-form-2">
+      <div class="sched-form-row"><label>开始时间</label><input class="inp" id="ev-start" type="time" value="${e ? fmtMin(e.startMin) : (p.time || '17:30')}"></div>
+      <div class="sched-form-row"><label>结束时间</label><input class="inp" id="ev-end" type="time" value="${e ? fmtMin(e.endMin) : ''}"></div>
+    </div>
+    <div class="sched-form-row"><label>颜色</label>${colorSwatchesHtml(schedPickedColor)}</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-blue" style="flex:1" onclick="schedSaveEvent()">保存</button>
+      ${id ? '<button class="btn btn-red" onclick="schedDeleteEvent()">删除</button>' : ''}
+    </div>`);
+}
+function schedSaveEvent() {
+  const name = document.getElementById('ev-name').value.trim();
+  if (!name) return alert('请填写事件名称');
+  const startMin = hmToMin(document.getElementById('ev-start').value);
+  let endMin = hmToMin(document.getElementById('ev-end').value);
+  if (startMin === null) return alert('请填写开始时间');
+  if (endMin === null || endMin <= startMin) endMin = startMin + 30;
+  const data = {
+    name,
+    weekday: parseInt(document.getElementById('ev-weekday').value),
+    startMin, endMin, color: schedPickedColor
+  };
+  if (schedEditEventId) {
+    const e = DATA.schedule.events.find(x => x.id === schedEditEventId);
+    if (e) Object.assign(e, data);
+  } else {
+    data.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    DATA.schedule.events.push(data);
+  }
+  save(); closeModal(); renderSchedule();
+}
+function schedDeleteEvent() {
+  if (!confirm('确定删除这个事件？')) return;
+  DATA.schedule.events = DATA.schedule.events.filter(x => x.id !== schedEditEventId);
+  save(); closeModal(); renderSchedule();
+}
+
+// ---------- 待办事项 ----------
+function openTodoModal() {
+  schedEnsure();
+  const p = schedSlotPrefill || {};
+  const { days } = schedViewWeek();
+  const ds = p.weekday ? dateStr(days[p.weekday - 1]) : today();
+  openModal('添加待办事项', `
+    <div class="sched-form-row"><label>内容</label><input class="inp" id="td-text" placeholder="如：交作业、借书"></div>
+    <div class="sched-form-2">
+      <div class="sched-form-row"><label>日期</label><input class="inp" id="td-date" type="date" value="${ds}"></div>
+      <div class="sched-form-row"><label>时间（可选）</label><input class="inp" id="td-time" type="time" value="${p.time || ''}"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" style="background:#be185d;flex:1" onclick="schedSaveTodo()">保存</button>
+    </div>`);
+}
+function schedSaveTodo() {
+  const text = document.getElementById('td-text').value.trim();
+  const date = document.getElementById('td-date').value;
+  if (!text || !date) return alert('请填写内容和日期');
+  DATA.schedule.todos.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    text, date, time: document.getElementById('td-time').value || '', done: false
+  });
+  save(); closeModal(); renderSchedule();
+}
+function schedQuickAddTodo() {
+  schedEnsure();
+  const text = document.getElementById('sched-todo-text').value.trim();
+  const date = document.getElementById('sched-todo-date').value || today();
+  if (!text) return alert('请填写待办内容');
+  DATA.schedule.todos.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    text, date, time: document.getElementById('sched-todo-time').value || '', done: false
+  });
+  document.getElementById('sched-todo-text').value = '';
+  save(); renderSchedule();
+}
+function toggleSchedTodo(id) {
+  const t = DATA.schedule.todos.find(x => x.id === id);
+  if (t) { t.done = !t.done; save(); renderSchedule(); }
+}
+function schedDeleteTodo(id) {
+  DATA.schedule.todos = DATA.schedule.todos.filter(x => x.id !== id);
+  save(); renderSchedule();
+}
+
+
+load();
+renderSchedule();
+
+// 跨页同步：完整看板修改后切回此页自动刷新
+setInterval(() => {
+  const current = today();
+  if (current !== (window._schedLastDate || current)) {
+    window._schedLastDate = current;
+    load();
+    renderSchedule();
+  }
+}, 30000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { load(); renderSchedule(); }
+});
+</script>
+</body>
+</html>
